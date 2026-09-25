@@ -108,8 +108,8 @@ scanner uses the image libraries GNOME already ships, or
 [Pillow](https://python-pillow.org/) if you have it.
 
 ```bash
-git clone https://github.com/Jackicus/Gnome-Extension-Games-Menu.git
-cd Gnome-Extension-Games-Menu
+git clone https://github.com/Jackicus/GNOME-Games-Menu.git
+cd GNOME-Games-Menu
 make install
 ```
 

@@ -131,7 +131,7 @@ that `metadata.json` reflect the extension "without using any unnecessary
 keys". Delete the line.
 
 **`url`**: the repository,
-`https://github.com/Jackicus/Gnome-Extension-Games-Menu` (the `origin`
+`https://github.com/Jackicus/GNOME-Games-Menu` (the `origin`
 remote). It is public, which it has to be: it is where users report problems
 and where a reviewer checks that the zip is what the repository holds.
 
