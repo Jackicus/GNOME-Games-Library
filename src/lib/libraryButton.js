@@ -38,6 +38,7 @@ class GamesMenuLibraryIcon extends Dash.ShowAppsIcon {
         // straight away — so it is set before the chain-up, as the shell sets
         // _iconActor before setDragApp() reads it.
         this._gicon = gicon;
+        // eslint-disable-next-line no-restricted-syntax -- constructor() could not set it first
         super._init();
         this.setLabelText(LIBRARY.title);
     }

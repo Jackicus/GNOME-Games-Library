@@ -30,10 +30,10 @@ import {createTitles} from './widgets.js';
 // the way back out is the button it came from, Escape, or a click away.
 const LibraryPanel = GObject.registerClass(
 class GamesMenuLibraryPanel extends MediaPanel {
-    _init({columns, rows, onActivate}) {
+    constructor({columns, rows, onActivate}) {
         // The folder's own behaviour: the panel goes when the button it came
         // out of unmaps, which is what closes it with the overview.
-        super._init({dieWithSource: true});
+        super({dieWithSource: true});
 
         this._columns = columns;
         this._rows = rows;

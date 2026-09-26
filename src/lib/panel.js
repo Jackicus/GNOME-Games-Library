@@ -94,8 +94,8 @@ export const MediaPanel = GObject.registerClass({
         'open-state-changed': {param_types: [GObject.TYPE_BOOLEAN]},
     },
 }, class GamesMenuPanel extends St.Bin {
-    _init({host = null, dieWithSource = true, size = 1, inset = 0, accessibleName = ''} = {}) {
-        super._init({
+    constructor({host = null, dieWithSource = true, size = 1, inset = 0, accessibleName = ''} = {}) {
+        super({
             visible: false,
             x_expand: true,
             y_expand: true,
