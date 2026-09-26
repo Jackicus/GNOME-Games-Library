@@ -15,7 +15,9 @@
 //
 // Nothing is drawn on the wallpaper. A game is one thing to launch, not a
 // collection to leave standing on the desktop, so the library is only ever
-// somewhere of the shell's, opened from its button beside Show Apps.
+// somewhere of the shell's, opened from its button beside Show Apps — the one
+// button, held here for as long as the extension is enabled, whichever place
+// the library opens in.
 
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as Util from 'resource:///org/gnome/shell/misc/util.js';
@@ -30,6 +32,7 @@ import {setCornerRadius} from './shape.js';
 import {setGridAlign} from './mediaGrid.js';
 import {MediaMenu} from './mediaMenu.js';
 import {LibraryWindow} from './libraryWindow.js';
+import {LibraryButton} from './libraryButton.js';
 import {DetailDialog} from './detailDialog.js';
 import {Controls} from './controls.js';
 
@@ -65,6 +68,14 @@ export class GamesMenuApp {
     constructor(extension) {
         this._settings = extension.getSettings();
         this._sections = {};
+        // The one way in, wherever the library opens. It lives as long as the
+        // extension does rather than per build, so a rescan or a setting
+        // changed does not take it out of the dash and put it back — nor move
+        // it past another extension's button beside Show Apps.
+        this._button = new LibraryButton({
+            path: extension.path,
+            onActivate: () => this._toggleLibrary(),
+        });
         // Where the library is browsed: the menu view or the window view.
         this._browser = null;
         // The pop-up a pick opens in, whichever place that is.
@@ -109,7 +120,7 @@ export class GamesMenuApp {
             Main.wm.addKeybinding(`${section.prefix}-shortcut`, this._settings,
                 Meta.KeyBindingFlags.NONE,
                 Shell.ActionMode.NORMAL | Shell.ActionMode.OVERVIEW | Shell.ActionMode.POPUP,
-                () => this._onShortcut(section.key));
+                () => this._onShortcut());
         }
 
         // The scanner writes library.json atomically; refresh when it lands so
@@ -142,6 +153,7 @@ export class GamesMenuApp {
             GLib.source_remove(this._rebuildTimer);
         this._rebuildTimer = 0;
         this._teardown();
+        this._button.detach();
         this._sections = {};
         this._controls.disable();
     }
@@ -202,6 +214,15 @@ export class GamesMenuApp {
         setCornerRadius(this._settings.get_int('corner-radius'));
         setGridAlign(this._settings.get_string('grid-align'));
 
+        // A library with no games in it has nothing to open, and no button to
+        // open it with; one that has keeps the button it had. The shortcut
+        // and a controller's Home still reach the browser, which opens
+        // nothing.
+        if (SECTIONS.some(s => this._sections[s.key]?.length))
+            this._button.attach();
+        else
+            this._button.detach();
+
         // A pick pops up in the folder's panel, which hosts itself over
         // whatever it is opened from.
         this._dialog = new DetailDialog({
@@ -219,6 +240,7 @@ export class GamesMenuApp {
             onActivate: (key, item, tile) => this._openPicked(key, item, tile),
             columns: this._settings.get_int('columns'),
             rows: this._settings.get_int('rows'),
+            button: this._button,
         });
         this._browser.enable();
     }
@@ -226,16 +248,22 @@ export class GamesMenuApp {
     // ------------------------------------------------------------------
     // Navigation
     // ------------------------------------------------------------------
-    // The shortcut: the library, wherever it opens, or — when that is what is
-    // up — the way back out, exactly as its button is pressed.
-    _onShortcut(key) {
+    // The button, or the shortcut: the library, wherever it opens, or — when
+    // that is what is up — the way back out. The browser is pressed as its
+    // own button would be.
+    _toggleLibrary() {
+        this._browser?.toggle();
+    }
+
+    // The shortcut is the button's press, wherever the library opens.
+    _onShortcut() {
         // A popup holds the keyboard for itself — a menu in the top bar, the
         // detail pop-up, another extension's panel — unless it is the modal
         // library's panel, which the shortcut closes as its button does.
         if (Main.actionMode === Shell.ActionMode.POPUP &&
-            !(this._browser instanceof LibraryWindow && this._browser.state.key))
+            !(this._browser instanceof LibraryWindow && this._browser.isShowing))
             return;
-        this._browser?.toggle(key);
+        this._toggleLibrary();
     }
 
     // A pick in the library. A "modal" pane wants the desktop to itself, so
@@ -266,9 +294,7 @@ export class GamesMenuApp {
     _controlsOpen() {
         if (global.display.focus_window || Main.modalCount > 0)
             return;
-        const first = SECTIONS.find(s => this._sections[s.key]?.length);
-        if (first)
-            this._browser?.open(first.key);
+        this._browser?.open();
     }
 
     // What the pane opens: a game's command line, or a folder.

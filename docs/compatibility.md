@@ -72,7 +72,7 @@ Every private path is the same at `48.0` as at `50.5`.
 | What | Where | Needs |
 |---|---|---|
 | `-st-accent-color`, `-st-accent-fg-color`, `st-mix()`, `st-lighten()`, `st-transparentize()` | `stylesheet.css`, throughout | GNOME 47. `src/st/st-theme-node.c` has none of them at `46.0` and all of them at `47.0` |
-| `St.BoxLayout({orientation})` | nine sites in `detailView.js`, `widgets.js`, `panel.js` and `sectionButtons.js` | GNOME 48. `src/st/st-box-layout.c` has only `vertical` at `47.0`, and `orientation` from `48.0` |
+| `St.BoxLayout({orientation})` | nine sites in `detailView.js`, `widgets.js`, `panel.js` and `libraryButton.js` | GNOME 48. `src/st/st-box-layout.c` has only `vertical` at `47.0`, and `orientation` from `48.0` |
 | `Adw.ToggleGroup`, `Adw.Toggle` | `prefs.js`, the two "opens in" rows and "Align covers" | libadwaita 1.7, which GNOME 48 ships |
 
 The shell does not load an extension on a version `metadata.json` does not
@@ -194,7 +194,7 @@ Then press the button on the desktop, close the overview, and press it again.
 The covers should be the same size both times, with Dash to Panel on and off.
 The row of small workspaces should fade out with no band left where it was.
 
-### The button beside Show Apps (sectionButtons.js)
+### The button beside Show Apps (libraryButton.js)
 
 The button subclasses the shell's `ShowAppsIcon`. Its class body is the same
 at `48.0`, `49.0`, `50.5` and `51.0`, apart from `let` becoming `const` and one

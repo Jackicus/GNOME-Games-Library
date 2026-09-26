@@ -29,10 +29,10 @@ because `src/` is changing; functions are named instead.
 | `BaseAppView`'s `_box`, `_parentalControlsManager`, `_appFavorites`, `_pageIndicators`, `_adjustment`, `_addItem()`; overrides of `_createGrid()`, `_loadApps()`, `_compareItems()` | mediaGrid.js | Same | No |
 | `IconGridLayout`'s `_pageWidth`, `_pageHeight`, `_pages[].visibleChildren`, `_pageSizeChanged`, `_shouldEaseItems` | mediaGrid.js | Empty pages | Yes, silently |
 | `AppViewItem(params, isDraggable, expandTitleOnHover)`, `_id`, `_name`; `BaseIcon`'s `icon` | mediaGrid.js | Tiles behave differently; the pop-up zooms out of the whole tile | Partly, silently |
-| `class extends Dash.ShowAppsIcon`: `_createIcon()`, `_iconActor`, `_canRemoveApp()` | sectionButtons.js | No button, or the wrong icon on it | Partly: a throw logs a warning |
-| `Main.overview.dash._dashContainer`, `dash._hookUpLabel()` | sectionButtons.js | No button in the dash; no tooltip | Yes, silently |
-| `global.dashToPanel.panels`, its `panels-created` signal | sectionButtons.js | The button goes into the dash, which Dash to Panel hides | Yes, silently |
-| Wrapping Dash to Panel's `panel._updateGroupedElements()`; `_elementGroups`, `showAppsIconWrapper.realShowAppsIcon`, `panel.panel` | sectionButtons.js | No button in the panel | Partly: a throw logs a warning |
+| `class extends Dash.ShowAppsIcon`: `_createIcon()`, `_iconActor`, `_canRemoveApp()` | libraryButton.js | No button, or the wrong icon on it | Partly: a throw logs a warning |
+| `Main.overview.dash._dashContainer`, `dash._hookUpLabel()` | libraryButton.js | No button in the dash; no tooltip | Yes, silently |
+| `global.dashToPanel.panels`, its `panels-created` signal | libraryButton.js | The button goes into the dash, which Dash to Panel hides | Yes, silently |
+| Wrapping Dash to Panel's `panel._updateGroupedElements()`; `_elementGroups`, `showAppsIconWrapper.realShowAppsIcon`, `panel.panel` | libraryButton.js | No button in the panel | Partly: a throw logs a warning |
 | `controls._appDisplay._folderIcons`, `icon._dialog`, `dialog._viewBox` | panel.js | The pop-ups shade where Blur my Shell's folders blur | Yes, silently |
 | `DIALOG_SHADE_NORMAL` (copied) | panel.js | The shade no longer matches a folder's | No |
 | `Meta.Workspace._keepAliveId` (read only) | app.js | "Play on a new workspace" can pick a workspace someone else is holding | No |
@@ -456,20 +456,20 @@ the grid is unverified.
 
 **Checked.** Only the zoom has a fallback; the rest is not checked.
 
-## The button (sectionButtons.js)
+## The button (libraryButton.js)
 
 ### Subclassing `Dash.ShowAppsIcon`
 
 ```js
-class GamesMenuSectionIcon extends Dash.ShowAppsIcon {
-    _init(section) {
-        this._section = section;
+class GamesMenuLibraryIcon extends Dash.ShowAppsIcon {
+    _init(gicon) {
+        this._gicon = gicon;
         super._init();
-        this.setLabelText(section.title);
+        this.setLabelText(LIBRARY.title);
     }
 
     _createIcon(size) {
-        this._iconActor = new St.Icon({icon_name: this._section.icon, ...});
+        this._iconActor = new St.Icon({gicon: this._gicon, ...});
         return this._iconActor;
     }
 

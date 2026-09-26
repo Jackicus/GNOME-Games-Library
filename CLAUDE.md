@@ -48,7 +48,7 @@ plain copy or symlink, so there is no file list to keep in sync — add a file t
   the game normaliser.
 - `lib/mediaMenu.js` — the `menu` library, in the overview's app-grid slot.
 - `lib/libraryWindow.js` — the `modal` library, in the folder's panel.
-- `lib/sectionButtons.js` — the library's button beside Show Apps.
+- `lib/libraryButton.js` — the library's one button beside Show Apps.
 - `lib/panel.js` — the shell's `AppFolderDialog`, with the folder taken out.
 - `lib/detailDialog.js`, `lib/detailView.js` — a picked game, popped up.
 - `lib/mediaGrid.js` — the shell's app grid, holding posters.
@@ -57,11 +57,18 @@ plain copy or symlink, so there is no file list to keep in sync — add a file t
   small pieces: widgets, the one radius, the one motion vocabulary, lists
   filled as they scroll.
 - `prefs.js` — General, Controls and Games pages.
+- `icons/library-symbolic.svg` — the button's gamepad.
 - `backend/` — the Python scanner; see `src/backend/CLAUDE.md`.
 
 The section's identity — its key, its `games-` settings, its title, its icon —
 is `SECTIONS` in `lib/library.js`, and nothing else restates it: `prefs.js`
-imports that list and merges in only what its page says.
+imports that list and merges in only what its page says. What the button
+beside Show Apps is called and shows is `LIBRARY` beside it: its icon is a
+file of the extension's own in `icons/`, not a theme name — the gamepad from
+Slider Overlay's Games group, as Video Menu's button has that group's
+television — read from the extension's directory (`lib/` runs from a staged
+copy that holds nothing else) and `-symbolic`, so St recolours it as it does
+Show Apps. The section's `icon` stays a theme name, for its preferences page.
 
 Runtime data: `~/.cache/games-menu/` — `library.json`, `posters/`, `backdrops/`,
 `metadata/` (one `index.json` of every cached record). The JS never scrapes; it
@@ -186,12 +193,18 @@ from the pair. There is no desktop or workspaces place: a game is one thing to
 launch, not a collection to leave standing on the wallpaper.
 
 Both places are opened from **one button beside Show Apps** (in the dash, or in
-Dash to Panel's panel). `sectionButtons.js` builds it — a `Dash.ShowAppsIcon`
+Dash to Panel's panel). `libraryButton.js` builds it — a `Dash.ShowAppsIcon`
 subclass for its icon and label — and it is the only way in besides the
-shortcut and a controller's Home. A library with no games in it gets no
-button. It behaves as a dock's Show Apps does: pressed on the desktop it opens
-the overview itself, so a second press or Escape closes it again and lands on
-the desktop; pressed with the overview already up, back to the window picker.
+shortcut and a controller's Home, which press it the same way (`app.js`
+`_toggleLibrary`). `app.js` holds it for as long as the extension is enabled
+and hands it to whichever browser a build makes, exactly as Video Menu holds
+its own, so a rebuild — a rescan landing, a setting changed — leaves it where
+it is and lit if it was, rather than taking it out of the dash, putting it
+back after any other extension's button, and zooming a restored panel out of
+a new one. A library with no games in it gets no button. It behaves as a
+dock's Show Apps does: pressed on the desktop it opens the overview itself, so
+a second press or Escape closes it again and lands on the desktop; pressed
+with the overview already up, back to the window picker.
 Every way out of an overview our button opened goes all the way down, Show
 Apps included: a dock keeps a `forcedOverview` flag of its own that ours never
 sets, so an overview left standing settled on the window picker and every
@@ -315,13 +328,13 @@ Everything below is what keeps them from breaking each other; keep it true.
 
 - **GObject type names are global to the process.** Every
   `GObject.registerClass` class here is `GamesMenu…` (`GamesMenuMediaView`,
-  `GamesMenuPanel`, `GamesMenuSectionIcon`, …). A duplicate name makes
+  `GamesMenuPanel`, `GamesMenuLibraryIcon`, …). A duplicate name makes
   `enable()` throw. A new class gets the prefix.
 - **Stylesheets are global.** Every class of ours is `gm-`. Shell classes
   (`app-folder-dialog`, `overview-tile`, `button`) are shared on purpose. The
   blur effect on a panel is named `games-menu-panel-blur`.
 - **Shell and Dash to Panel monkey-patches must chain.** `mediaMenu.js` wraps
-  the overview layout's `_getAppDisplayBoxForState` and `sectionButtons.js`
+  the overview layout's `_getAppDisplayBoxForState` and `libraryButton.js`
   wraps Dash to Panel's `panel._updateGroupedElements`, both as own properties
   of the instance, and another extension may wrap the same two. Each wrapper
   calls whatever it found, so they stack in either order. Taking one back is
@@ -474,7 +487,7 @@ Everything below is what keeps them from breaking each other; keep it true.
   `_getAppDisplayBoxForState` (wrapped, and unwrapped on disable — see
   "Running next to other extensions"), `appDisplay._box`, and `BaseAppView`,
   which the shell does not export and is reached as `AppDisplay`'s prototype.
-  `sectionButtons.js` adds `global.dashToPanel.panels` and its
+  `libraryButton.js` adds `global.dashToPanel.panels` and its
   `panels-created` signal (Dash to Panel's own, used to re-attach the button
   when it rebuilds its panels), its `_updateGroupedElements` (wrapped), and
   `Dash.ShowAppsIcon` (exported, but its `_createIcon` and `_iconActor` are

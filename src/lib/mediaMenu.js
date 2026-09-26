@@ -5,9 +5,9 @@
 // AppDisplay shown in place of the grid's own box, so the overview allocates
 // it, slides it up and hides it for search exactly as it does the apps.
 //
-// The library gets a button beside Show Apps (sectionButtons.js), in the dash
-// or in Dash to Panel's panel. It is the only way in: it opens the overview
-// straight onto the games, and pressed again it closes what it opened. That
+// The library's button beside Show Apps (libraryButton.js), in the dash or in
+// Dash to Panel's panel, is the only way in: it opens the overview straight
+// onto the games, and pressed again it closes what it opened. That
 // is the rule the docks' Show Apps follows (Dash to Panel and Dash to Dock
 // both keep a `forcedOverview` flag): a button pressed on the desktop opened
 // the overview itself, so a second press — or Escape — takes the overview
@@ -38,7 +38,6 @@ import {ControlsState} from 'resource:///org/gnome/shell/ui/overviewControls.js'
 
 import {Duration, Ease} from './anim.js';
 import {createMediaView} from './mediaGrid.js';
-import {SectionButtons} from './sectionButtons.js';
 
 // The overview gives the dash no more than this share of its height, and
 // leaves this much of it between its rows (DASH_MAX_HEIGHT_RATIO and
@@ -47,18 +46,17 @@ const DASH_MAX_SHARE = 0.16;
 const VERTICAL_SPACING_SHARE = 0.02;
 
 export class MediaMenu {
-    constructor({sections, itemsFor, onActivate, columns, rows}) {
-        // A library with nothing in it gets no button.
+    // `button` is the library's button beside Show Apps, which the app holds
+    // and hands to whichever place the library opens in.
+    constructor({sections, itemsFor, onActivate, columns, rows, button}) {
+        // A library with nothing in it has nothing to open, and no button.
         this._sections = sections.filter(s => itemsFor(s.key).length);
         this._itemsFor = itemsFor;
         this._onActivate = onActivate;
         this._columns = columns;
         this._rows = rows;
         this._views = new Map();
-        this._buttons = new SectionButtons({
-            sections: this._sections,
-            onActivate: key => this.toggle(key),
-        });
+        this._button = button;
         // Show Apps, once `enable` has found the overview; never, for an empty
         // library, though the shortcut still reaches `toggle`.
         this._showAppsButton = null;
@@ -151,15 +149,12 @@ export class MediaMenu {
         }, this);
 
         this._foldWorkspaces();
-
-        this._buttons.attach();
     }
 
     disable() {
         if (!this._appsBox)
             return;
         this._show(null);
-        this._buttons.detach();
         this._unfoldWorkspaces();
         this._controls.queue_relayout();
         this._showAppsButton?.disconnectObject(this);
@@ -304,8 +299,9 @@ export class MediaMenu {
     // The button, or the shortcut: the view, opening the overview onto it if
     // need be; or, when that view is what is up, the way back out — to the
     // desktop if this is an overview a button of ours opened, else unchecked,
-    // which the shell takes back to the window picker.
-    toggle(key) {
+    // which the shell takes back to the window picker. `key` is the section,
+    // or the library's first.
+    toggle(key = this._sections[0]?.key) {
         if (Main.overview.visible && this._showAppsButton?.checked && this._current) {
             if (this._forced)
                 Main.overview.hide();
@@ -363,7 +359,7 @@ export class MediaMenu {
     // under both. So the overview goes down with the other view in it, and
     // comes back up onto ours
     // (`hidden`, in `enable`), as a dock's Show Apps would reopen it.
-    open(key) {
+    open(key = this._sections[0]?.key) {
         this._next = null;
         if (!this._appsBox || !this._sections.some(s => s.key === key))
             return;
@@ -442,8 +438,8 @@ export class MediaMenu {
             this._syncWorkspaces(true);
             this._controls.queue_relayout();
         }
-        // A toggle button unchecks itself when the one that is up is clicked.
-        this._buttons.sync(this._current);
+        // A toggle button unchecks itself when it is clicked while up.
+        this._button.sync(!!this._current);
     }
 
     // The slot as the overview will lay it out under the view: the one the

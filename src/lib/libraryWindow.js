@@ -4,7 +4,7 @@
 // (appDisplay.js:2085) — a grid of apps inside the panel that zoomed out of
 // the folder's icon. This is that shape with posters: `panel.js` is the panel,
 // `mediaGrid.js` the grid, and the icon it comes out of is the library's
-// button beside Show Apps (sectionButtons.js). The button is the way in and
+// button beside Show Apps (libraryButton.js). The button is the way in and
 // the panel is the whole view.
 //
 // Where it opens follows where its button is. On stock GNOME the dash lives in
@@ -24,7 +24,6 @@ import St from 'gi://St';
 import {libraryCountLabel} from './library.js';
 import {createMediaView} from './mediaGrid.js';
 import {MediaPanel} from './panel.js';
-import {SectionButtons} from './sectionButtons.js';
 import {createTitles} from './widgets.js';
 
 // The panel: the library's name and count over the grid, and nothing else —
@@ -139,28 +138,26 @@ class GamesMenuLibraryPanel extends MediaPanel {
 });
 
 export class LibraryWindow {
-    constructor({sections, itemsFor, onActivate, columns, rows}) {
-        // A library with nothing in it gets no button, as in the menu library.
+    // `button` is the library's button beside Show Apps, which the app holds
+    // and hands to whichever place the library opens in.
+    constructor({sections, itemsFor, onActivate, columns, rows, button}) {
+        // A library with nothing in it has nothing to open, as in the menu
+        // library.
         this._sections = sections.filter(s => itemsFor(s.key).length);
         this._itemsFor = itemsFor;
         this._onActivate = onActivate;
         this._columns = columns;
         this._rows = rows;
-        this._buttons = new SectionButtons({
-            sections: this._sections,
-            onActivate: key => this.toggle(key),
-        });
+        this._button = button;
         this._panel = null;
         this._current = null;
     }
 
     enable() {
-        this._buttons.attach();
     }
 
     disable() {
         this.close();
-        this._buttons.detach();
         this._panel?.destroy();
         this._panel = null;
         this._current = null;
@@ -168,7 +165,8 @@ export class LibraryWindow {
 
     // The button, or the shortcut: the library, or — when that is what is up —
     // the way out, as a second press of a folder's icon closes the folder.
-    toggle(key) {
+    // `key` is the section, or the library's first.
+    toggle(key = this._sections[0]?.key) {
         if (this._panel?.isOpen && this._current === key) {
             this.close();
             return;
@@ -176,9 +174,8 @@ export class LibraryWindow {
         this.open(key);
     }
 
-    // `key`'s library, out of `source` — its button, unless the caller has a
-    // tile of its own for the panel to zoom out of.
-    open(key, source = null) {
+    // `key`'s library, out of the button.
+    open(key = this._sections[0]?.key) {
         const section = this._sections.find(s => s.key === key);
         if (!section)
             return;
@@ -195,7 +192,7 @@ export class LibraryWindow {
                 if (isOpen)
                     return;
                 this._current = null;
-                this._buttons.sync(null);
+                this._button.sync(false);
             });
         }
 
@@ -204,15 +201,14 @@ export class LibraryWindow {
             // so is its own artwork. A shortcut pressed on the desktop finds
             // it unmapped, the dash being the overview's, and an unmapped
             // icon has nowhere to zoom out of: the panel fades in centred.
-            const button = this._buttons.buttonFor(key)?.icon;
-            this._panel.popup(source ?? (button?.mapped ? button : null));
+            this._panel.popup(this._button.icon);
             if (!this._panel.isOpen)
                 return;
         }
 
         this._current = key;
         this._panel.showSection(section, this._itemsFor(key));
-        this._buttons.sync(key);
+        this._button.sync(true);
     }
 
     close() {
@@ -232,8 +228,8 @@ export class LibraryWindow {
         return {key: this._panel?.isOpen ? this._current : null};
     }
 
-    // The panel back up on the section `state` names, out of the button the
-    // rebuild has just made for it.
+    // The panel back up on the section `state` names, out of the button — the
+    // same one it was opened from, which a rebuild leaves where it is.
     restore(state) {
         if (state?.key)
             this.open(state.key);

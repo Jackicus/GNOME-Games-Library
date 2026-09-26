@@ -32,19 +32,20 @@ This runs `scripts/dev.sh pack` (`cmd_pack`), which:
    (`strip_unshipped`): `__pycache__/`, `*.pyc` and the `CLAUDE.md` notes under
    `backend/`. `gnome-extensions pack` has no exclude flag, so the copy is what
    keeps them out;
-3. runs `gnome-extensions pack --force --extra-source=lib --extra-source=backend`
+3. runs `gnome-extensions pack --force --extra-source=lib --extra-source=backend
+   --extra-source=icons`
    in the copy, writing to `dist/`. On its own, `gnome-extensions` adds
    `extension.js`, `metadata.json`, `prefs.js`, `stylesheet.css` (and
    `stylesheet-dark.css`/`stylesheet-light.css`, which do not exist here) and
    every `schemas/*.gschema.xml`. It adds nothing else (`command-pack.c` at
-   `50.5`). `lib/` and `backend/` have to be named. So would a licence file,
+   `50.5`). `lib/`, `backend/` and `icons/` have to be named. So would a licence file,
    and it would also have to be inside the copy;
 4. deletes the copy. The output is `dist/games-menu@jackt.shell-extension.zip`.
 
-It does not check what went in, so a stray file under `lib/` or `backend/`
+It does not check what went in, so a stray file under `lib/`, `backend/` or `icons/`
 (an editor backup, a note) ships.
 
-What it contains today (26 entries, 302 kB unpacked, 103 kB zipped):
+What it contains today (28 entries, 305 kB unpacked, 105 kB zipped):
 
 ```
 metadata.json
@@ -54,8 +55,9 @@ stylesheet.css
 schemas/org.gnome.shell.extensions.games-menu.gschema.xml
 lib/actions.js  lib/anim.js  lib/app.js  lib/controls.js  lib/detailDialog.js
 lib/detailView.js  lib/lazyList.js  lib/library.js  lib/libraryWindow.js
-lib/mediaGrid.js  lib/mediaMenu.js  lib/panel.js  lib/sectionButtons.js
+lib/libraryButton.js  lib/mediaGrid.js  lib/mediaMenu.js  lib/panel.js
 lib/shape.js  lib/widgets.js
+icons/library-symbolic.svg
 backend/games_scanner.py  backend/metadata.py  backend/scan_library.py
 ```
 
@@ -307,7 +309,7 @@ at the reviewer's discretion." Two things fall under it.
    extension directory. In every install EGO produces it is dead code, because
    nobody edits an installed copy. Hard to defend; move it out of what ships
    ([below](#the-development-path-in-extensionjs)).
-2. **Dash to Panel.** `sectionButtons.js` reads `global.dashToPanel`, listens
+2. **Dash to Panel.** `libraryButton.js` reads `global.dashToPanel`, listens
    for its `panels-created` and for `Main.extensionManager`'s
    `extension-state-changed`, and wraps `_updateGroupedElements` on Dash to
    Panel's primary panel so the Games button sits after Show Apps. That is
@@ -499,7 +501,7 @@ a reviewer would find:
   (26%) are comments, and file headers run 10 to 30 lines. They explain why
   rather than what, which is what the guidelines want. But the volume is
   unusual, and several cite the shell's source by file and line number (in
-  `mediaGrid.js`, `mediaMenu.js`, `panel.js`, `widgets.js`, `sectionButtons.js`
+  `mediaGrid.js`, `mediaMenu.js`, `panel.js`, `widgets.js`, `libraryButton.js`
   and `libraryWindow.js`). Those numbers go stale with every GNOME release and
   read as generated. Keep the reason and drop the line numbers.
 - **Optional chaining on guaranteed APIs** ("Avoid Unnecessary Checks"):
@@ -528,7 +530,7 @@ a reviewer would find:
     reports itself as running and does nothing, and the Extensions app shows no
     error;
   - `extension.js` `disable()` hides whatever `GamesMenuApp.disable()` throws;
-  - the `release` of `SectionButtons._attachToDash()` wraps
+  - the `release` of `LibraryButton._attachToDash()` wraps
     `dash.disconnectObject(this)` and `destroy()` in an empty catch. That is
     Best Practices' own example of a wrapper that is not needed.
 
@@ -540,7 +542,7 @@ a reviewer would find:
   exists only because the staging makes `enable()` async, and it goes with it.
   `Controls._starting` guards the async libmanette import against a
   `disable()` that lands during it; that is a real race, so keep it.
-  `released` in `SectionButtons._attachToPanel()` is set by the box's
+  `released` in `LibraryButton._attachToPanel()` is set by the box's
   `destroy` so the box is not destroyed twice when Dash to Panel has already
   taken it down. It is close to the `this._destroyed` pattern the page warns
   about, so be ready to explain it.
@@ -602,9 +604,11 @@ and artwork, and multimedia.
   That use describes compatibility rather than branding the extension. EGO
   already lists extensions with Steam in their names (Add to Steam). Expect at
   most a request to reword. Keep logos out.
-- **Artwork.** The zip ships none: its files are code, the schema and the
-  stylesheet, which has no `url()`. The one icon is the theme's
-  `applications-games-symbolic`, and placeholders are drawn in `widgets.js`.
+- **Artwork.** The zip ships no game artwork: its files are code, the schema,
+  the stylesheet, which has no `url()`, and one icon, the button's gamepad
+  (`icons/library-symbolic.svg`, a single path from the author's own Slider
+  Overlay). The preferences' page icons are the theme's, and placeholders are
+  drawn in `widgets.js`.
   Covers and backdrops arrive at runtime on the user's machine, copied from the
   Steam client's own cache and PCSX2's covers folder or downloaded from Valve's
   CDN and IGDB. The Code of Conduct section allows for that ("extensions may be
@@ -641,7 +645,7 @@ it does:
 - `MediaMenu.enable()` checks for the overview's controls, the app display and
   its `_box`, and warns and draws nothing without them;
 - `_foldWorkspaces()` checks that `_getAppDisplayBoxForState` is a function;
-- `SectionButtons._attach()` falls back from Dash to Panel to the dash, and
+- `LibraryButton._attach()` falls back from Dash to Panel to the dash, and
   catches a failed attach;
 - `panel.js` `folderLook()` falls back to the stock shade.
 

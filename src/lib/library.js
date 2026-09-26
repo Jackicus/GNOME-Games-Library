@@ -12,8 +12,8 @@ import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 
 // The one section. It is a list, and a section is a key, because that is the
-// shape the grid, the button beside Show Apps and the preferences are built
-// around: `games-` settings, a title and an icon, looked up by key.
+// shape the grid and the preferences are built around: `games-` settings, a
+// title and an icon, looked up by key.
 export const SECTIONS = [
     {
         key: 'games',
@@ -23,6 +23,17 @@ export const SECTIONS = [
         aspect: 1.5,
     },
 ];
+
+// The library as a whole: what its one button beside Show Apps is called and
+// shows. The icon is a file of the extension's own, in `icons/` — a gamepad,
+// the same one the Games group has in Slider Overlay, as Video Menu's button
+// has that group's television — and is `-symbolic`, so St recolours it to the
+// theme's foreground as it does the shell's own. The section's `icon` is
+// still a theme name, for its page in the preferences.
+export const LIBRARY = {
+    title: 'Games',
+    icon: 'icons/library-symbolic.svg',
+};
 
 export function sectionByKey(key) {
     return SECTIONS.find(s => s.key === key) ?? SECTIONS[0];
