@@ -1,22 +1,13 @@
 # Publishing to extensions.gnome.org
 
 How to build the upload, what goes in it, and how the extension stands against
-the EGO review guidelines. Web sources are named where they are used; the
-guidelines are gjs.guide's
+the EGO review guidelines. The guidelines are gjs.guide's
 [Review Guidelines](https://gjs.guide/extensions/review-guidelines/review-guidelines.html)
-and [Best Practices](https://gjs.guide/extensions/review-guidelines/best-practices.html),
-with [Anatomy of an Extension](https://gjs.guide/extensions/overview/anatomy.html)
-for `metadata.json`, as fetched on 2026-09-25. Where the shell's own code is
-cited, it is GNOME Shell 50.5.
+and [Best Practices](https://gjs.guide/extensions/review-guidelines/best-practices.html).
 
-In short: two things are likely to stop the first upload as the code stands.
-They are the Python scanner in `backend/` ([Scripts and
-binaries](#scripts-and-binaries-does-not-meet-as-it-stands)) and the staging of
-`lib/` in `extension.js` ([the development
-path](#the-development-path-in-extensionjs)). A third is a risk rather than a
-rule: a fresh install shows nothing until the library is scanned ([Extensions
-must be functional](#extensions-must-be-functional-a-risk-worth-knowing)). The
-rest are small fixes.
+Private API use is a separate concern with its own page,
+[private-api.md](private-api.md) — this page links to it rather than
+repeating what it covers.
 
 ## Building the zip
 
@@ -26,48 +17,59 @@ make pack
 
 This runs `scripts/dev.sh pack` (`cmd_pack`), which:
 
-1. compiles the schema into `src/schemas/gschemas.compiled`, as `link` and
-   `install` do. That file is gitignored and does not reach the zip (step 3);
-2. copies `src/` into a temporary directory and strips the copy
-   (`strip_unshipped`): `__pycache__/`, `*.pyc` and the `CLAUDE.md` notes under
-   `backend/`. `gnome-extensions pack` has no exclude flag, so the copy is what
-   keeps them out;
+1. checks the schema with `glib-compile-schemas --strict --dry-run
+   "$SRC_DIR/schemas"` and stops if it fails — the same check an install
+   enforces, run as part of every pack rather than left as a manual step;
+2. copies `src/` into a temporary staging directory, strips it with
+   `strip_unshipped` (`__pycache__/`, `*.pyc`, every `CLAUDE.md` including
+   `src/backend/CLAUDE.md`) and the compiled schema, and copies the repo
+   root's `LICENSE` into the stage;
 3. runs `gnome-extensions pack --force --extra-source=lib --extra-source=backend
-   --extra-source=icons`
-   in the copy, writing to `dist/`. On its own, `gnome-extensions` adds
-   `extension.js`, `metadata.json`, `prefs.js`, `stylesheet.css` (and
-   `stylesheet-dark.css`/`stylesheet-light.css`, which do not exist here) and
-   every `schemas/*.gschema.xml`. It adds nothing else (`command-pack.c` at
-   `50.5`). `lib/`, `backend/` and `icons/` have to be named. So would a licence file,
-   and it would also have to be inside the copy;
-4. deletes the copy. The output is `dist/games-menu@jackt.shell-extension.zip`.
+   --extra-source=icons --extra-source=LICENSE -o dist .` from inside that
+   staged copy. `gnome-extensions` adds `extension.js`, `metadata.json`,
+   `prefs.js`, `stylesheet.css` and every `schemas/*.gschema.xml` itself
+   (`command-pack.c`); `lib/`, `backend/`, `icons/` and `LICENSE` all need
+   naming because none of them is one of its recognised top-level files;
+4. calls `check_pack`, which computes the expected file list (`extension.js
+   prefs.js metadata.json stylesheet.css schemas/*.gschema.xml LICENSE`, every
+   `lib/*.js`, every `backend/*.py` outside `__pycache__`, every `icons/*.svg`)
+   and diffs it against `unzip -Z1` of the built zip, failing loudly and
+   naming both what's missing and what shouldn't be there on any mismatch;
+5. deletes the staging directory and reports
+   `dist/games-menu@jackicus.shell-extension.zip`.
 
-It does not check what went in, so a stray file under `lib/`, `backend/` or `icons/`
-(an editor backup, a note) ships.
+What each shipped part is:
 
-What it contains today (28 entries, 305 kB unpacked, 105 kB zipped):
+- **`extension.js`, `metadata.json`, `prefs.js`, `stylesheet.css`,
+  `schemas/*.gschema.xml`** — the entry point and the two files
+  `gnome-extensions` always looks for.
+- **`LICENSE`** — GPL-2.0-or-later, copied in from the repo root at pack time.
+- **`lib/`** — the shell-side implementation: the library, the two browsers,
+  the detail pop-up, controls, the button beside Show Apps and its Dash to
+  Panel wrap. All of it runs inside the compositor process.
+- **`backend/`** — a Python 3 program (`scan_library.py`, `games_scanner.py`,
+  `metadata.py`) that reads Steam's and PCSX2's own bookkeeping, fetches
+  artwork and metadata online, and writes `~/.cache/games-menu/library.json`.
+  It is not GJS and is not spawned by `extension.js`: the preferences' Rescan
+  button and `dev.sh scan` both invoke it out-of-process with `python3`. See
+  [Scripts and binaries](#scripts-and-binaries-does-not-meet-as-it-stands)
+  below — this is the part of the review most worth thinking about before
+  uploading. `scan_library.py` keeps its executable bit in the zip; nothing
+  relies on that, since it is always run as `python3 <path>`.
+- **`icons/library-symbolic.svg`** — the one icon, used for the button beside
+  Show Apps.
 
-```
-metadata.json
-extension.js
-prefs.js
-stylesheet.css
-schemas/org.gnome.shell.extensions.games-menu.gschema.xml
-lib/actions.js  lib/anim.js  lib/app.js  lib/controls.js  lib/detailDialog.js
-lib/detailView.js  lib/lazyList.js  lib/library.js  lib/libraryWindow.js
-lib/libraryButton.js  lib/mediaGrid.js  lib/mediaMenu.js  lib/panel.js
-lib/shape.js  lib/widgets.js
-icons/library-symbolic.svg
-backend/games_scanner.py  backend/metadata.py  backend/scan_library.py
-```
+What is left out, and why it is safe to leave out:
 
-`backend/scan_library.py` keeps its executable bit in the zip. Nothing relies
-on that, since the preferences run it as `python3 <path>`.
-
-What it leaves out: `src/schemas/gschemas.compiled`, bytecode,
-`src/backend/CLAUDE.md`, `scripts/`, `docs/`, `README.md`, `CLAUDE.md`, the
-`Makefile` and `.claude/`. A new module under `lib/` or `backend/` is picked up
-without changes here, because both directories are packed whole.
+- **`src/schemas/gschemas.compiled`** — deleted from the stage before packing.
+  GNOME 44 onward compiles the schema on install rather than expecting it in
+  the zip (`extensionDownloader.js` runs `glib-compile-schemas --strict` after
+  unzipping an EGO download).
+- **`__pycache__/`, `*.pyc`** — stripped by `strip_pycache`.
+- **`CLAUDE.md`** (root and `src/backend/`) — stripped by `strip_unshipped`.
+- **`scripts/`, `README.md`, `docs/`, `.claude/`, `.git`, `dist/`** — never
+  part of `src/`, so never seen by the packer at all; `--extra-source` only
+  reaches directories under the packed tree.
 
 ### Why the schema ships as XML only
 
@@ -83,10 +85,10 @@ without changes here, because both directories are packed whole.
   `glib-compile-schemas --strict <extension>/schemas` after unzipping an EGO
   download, and `gnome-extensions install` does the same
   (`command-install.c`). `--strict` means a schema warning is an install
-  failure, so run `glib-compile-schemas --strict --dry-run src/schemas` before
-  uploading. It passes today.
+  failure, which is why `cmd_pack` runs the same check before it packs
+  anything (step 1 [above](#building-the-zip)).
 
-Every claimed version (48 and later) compiles on install, so the zip carries no
+Every claimed version (44 and later) compiles on install, so the zip carries no
 compiled schema.
 
 ### Testing the zip before uploading
@@ -94,65 +96,51 @@ compiled schema.
 ```sh
 make uninstall
 make pack
-gnome-extensions install dist/games-menu@jackt.shell-extension.zip
+gnome-extensions install dist/games-menu@jackicus.shell-extension.zip
 # log out and back in, then enable it
 ```
 
-Always run `make uninstall` first. Never use `install --force` over the
-development link. `make link` makes the extension directory a symlink to
-`src/`. `--force` deletes the existing directory with
-`file_delete_recursively` (`main.c` in the extensions tool), which enumerates
-it without `NOFOLLOW_SYMLINKS`. It follows the link, deletes every file in
-`src/`, and then deletes the link. `make link` restores the link afterwards.
+Do this rather than `gnome-extensions install --force` over the development
+link: `make link` builds the extension directory as a directory of links into
+`src/`, and `--force` deletes the existing directory with
+`file_delete_recursively()` (`main.c` in the extensions tool), which
+enumerates it without `NOFOLLOW_SYMLINKS`. It follows every link, deletes what
+is in `src/`, and then deletes the links themselves. `make uninstall` removes
+only the directory of links, and `make link` restores it afterwards.
 
-`make install` is not the same test. It copies `src/` with rsync, so it never
-runs what `make pack` put in the zip. The installed copy also runs its own
-`backend/`, so press Rescan in its preferences once.
+This is also the only way to exercise exactly what a reviewer receives: `make
+link` installs `scripts/dev-extension.js` as the entry point, for
+edit-without-restart during development — see [Avoid interfering with the
+extension system](#avoid-interfering-with-the-extension-system-meets) below —
+which is not what ships. Only an installed zip runs the real `src/extension.js`
+and proves the packed `backend/` and `icons/` paths resolve the way its
+`this.dir`-relative code expects.
+
+`make install` is not the same test either. It copies `src/` with rsync, so it
+never runs what `make pack` put in the zip. The installed copy also runs its
+own `backend/`, so press Rescan in its preferences once.
 
 ## metadata.json
 
-| Key | Now | Verdict |
+Current contents:
+
+| Key | Value | Verdict |
 |---|---|---|
-| `uuid` | `games-menu@jackt` | Valid characters and not `gnome.org`. It is the extension's identity on EGO and cannot change after the first upload |
-| `name` | `Games Menu` | Generic, no brand in it. No extension on EGO has this name (searched 2026-09-25) |
-| `description` | one sentence | Should say more (below) |
-| `shell-version` | 48, 49, 50 | All released, so allowed, but only 50 has been booted |
-| `settings-schema` | set | Correct. `getSettings()` is called without arguments (`GamesMenuApp`'s constructor, `fillPreferencesWindow`), which is what Best Practices asks |
-| `url` | absent | **Required**: "It is required for extensions submitted to https://extensions.gnome.org/ to have a valid URL" (Anatomy) |
-| `version` | `1` | **Remove it** (below) |
-| `version-name` | absent | Worth adding |
-| `session-modes` | absent | Correct ("MUST be dropped if you are only using `user` mode") |
-| `donations`, `gettext-domain` | absent | Correct |
-
-**`version`** is EGO's field. The Anatomy page says: "This field SHOULD NOT be
-set by extension developers. The GNOME Extensions website will override this
-field and GNOME Shell may automatically upgrade or downgrade an extension if the
-version field is set." The review guidelines' table lists it as "Deprecated:
-This field is set for internal use by extensions.gnome.org". The same rule asks
-that `metadata.json` reflect the extension "without using any unnecessary
-keys". Delete the line.
-
-**`url`**: the repository,
-`https://github.com/Jackicus/GNOME-Games-Menu` (the `origin`
-remote). It is public, which it has to be: it is where users report problems
-and where a reviewer checks that the zip is what the repository holds.
-
-**`version-name`** is the version users see. Without it EGO shows its own
-counter. The Anatomy page says it "MUST be a string that only contains letters,
-numbers, space and period with a length between 1 and 16 characters", matching
-`/^(?!^[. ]+$)[a-zA-Z0-9 .]{1,16}$/`. So `"1.0"` or `"1.0 beta"` is fine, but
-`"v1.0-beta"` is not, because of the dash. Recommendation: add
-`"version-name": "1.0"` and bump it with each upload.
+| `uuid` | `games-menu@jackicus` | Valid characters, not under `gnome.org`. Cannot change after the first upload |
+| `name` | `Games Menu` | Generic, no brand in it. No extension on EGO has this name |
+| `description` | one sentence | Correct as far as it goes; could say more (below) |
+| `settings-schema` | set | Correct; `getSettings()` is called with no arguments in both `lib/app.js` (`GamesMenuApp`'s constructor) and `prefs.js` (`fillPreferencesWindow`), as Best Practices asks |
+| `shell-version` | `["50"]` | The only version actually booted (per [compatibility.md](compatibility.md), 48 and 49 are audited against the shell's sources, not booted, so they're not claimed yet) |
+| `url` | `https://github.com/Jackicus/GNOME-Games-Menu` | Set — the `origin` remote, public, so users can report problems and a reviewer can check the zip against the repository |
+| `version-name` | `"1.0"` | Valid: letters, numbers, space and period only, ≤ 16 characters |
+| `version` | absent | Correct — EGO assigns and increments this itself; it should never be set here |
+| `session-modes` | absent | Correct — the extension only needs `user` mode and the guideline says the key "MUST be dropped" in that case |
+| `donations`, `gettext-domain` | absent | Correct; neither is required |
 
 **`shell-version`**: the guideline is that it "MUST only contain stable releases
 and up to one development release. Extensions must not claim to support future
-GNOME Shell versions." 48 to 50 are all released, so the list is allowed. It is
-also a promise: "if an extension is tested and found to be fundamentally broken
-it will be rejected". 48 and 49 are claimed from an audit of the shell's
-sources, not from running them ([compatibility.md](compatibility.md)). The
-safest first upload claims what has been run (50). Add versions as they pass the
-checklist in [compatibility.md](compatibility.md). A new upload can widen the
-list.
+GNOME Shell versions." Add 48 and 49 once they pass the checklist in
+[compatibility.md](compatibility.md); a new upload can widen the list.
 
 **`description`** is the only place a user or reviewer learns what the
 extension needs and where their data goes. It is also the only place that
@@ -182,17 +170,13 @@ Multi-paragraph descriptions use `\n` literals, and `*` makes a bullet list
 
 ### Only use initialization for static resources: meets
 
-`src/extension.js` has no constructor and imports only Gio, GLib and
-`Extension`. Everything under `lib/` is loaded with `await import()` inside
-`enable()`, so no module of the extension's own runs before it.
-
-Once `lib/` is imported statically (see [the development
-path](#the-development-path-in-extensionjs)), its module scope will run at load
-time instead, and all of it is allowed: `GObject.registerClass` calls, constant
-tables, `BaseAppView` read off `AppDisplay`'s prototype, two `Cogl.Color`
-constants in `panel.js` (a boxed value, not a GObject instance), `shape.js`
-building its radius strings, and a few `let` holders. `GamesMenuApp` calls
-`getSettings()` and constructs `Controls` in its constructor, and it is
+`src/extension.js`'s class body has no constructor, and imports only
+`Extension` and a static `import` of `lib/app.js`. So `lib/`'s module scope
+runs at load time, and all of it is allowed: `GObject.registerClass` calls,
+constant tables, `BaseAppView` read off `AppDisplay`'s prototype, two
+`Cogl.Color` constants in `panel.js` (a boxed value, not a GObject instance),
+`shape.js` building its radius strings, and a few `let` holders. `GamesMenuApp`
+calls `getSettings()` and constructs `Controls` in its constructor, and it is
 constructed inside `enable()`. The virtual keyboard is created in
 `Controls.enable()`.
 
@@ -219,21 +203,22 @@ be cleared or freed in disable()" literally could ask about them.
 Each class tears down what it built, which is what "Avoid Spaghetti Cleanup"
 asks for.
 
-Two things outlive `disable()`:
+One thing outlives `disable()`: **the two method wrappers**,
+`_getAppDisplayBoxForState` on the overview's layout and
+`_updateGroupedElements` on Dash to Panel's primary panel, but only when
+another extension wrapped the same method after this one. Removing ours then
+would unhook theirs, so ours stays as an inert link in their chain. It checks
+that it is still hooked before doing anything, and the comments where it is put
+on say why. Expect the question anyway.
 
-- **The staged copy of `lib/`** in `$XDG_RUNTIME_DIR/games-menu/lib-<stamp>/`.
-  It is kept on purpose, and the next `enable()` sweeps it if it is stale. It
-  goes away with [the development path](#the-development-path-in-extensionjs).
-- **The two method wrappers**, `_getAppDisplayBoxForState` on the overview's
-  layout and `_updateGroupedElements` on Dash to Panel's primary panel, but only
-  when another extension wrapped the same method after this one. Removing ours
-  then would unhook theirs, so ours stays as an inert link in their chain. It
-  checks that it is still hooked before doing anything, and the comments where
-  it is put on say why. Expect the question anyway.
+Under the dev entry point (`scripts/dev-extension.js`, never shipped), the
+staged copy of `lib/` in `$XDG_RUNTIME_DIR/games-menu/lib-<stamp>/` also
+outlives `disable()`, kept on purpose so the next `enable()` can reuse or sweep
+it ([private-api.md](private-api.md#not-shell-internals-staging-lib)).
 
-`extension.js` wraps `this._app.disable()` in a try/catch that only logs. See
-[AI-generated](#extensions-must-not-be-ai-generated-know-the-code) and the open
-list.
+`extension.js`'s own `disable()` carries no try/catch: `this._app.disable();
+this._app = null;`. A throw there reaches the shell, same as a throw from
+`enable()` ([AI-generated](#extensions-must-not-be-ai-generated-know-the-code)).
 
 ### Disconnect all signals: meets, with one to tidy
 
@@ -292,33 +277,34 @@ load. There are none yet, but `prefs.js` is 1,232 lines, and splitting it into
 `prefs/` modules would also answer "Modules are Better Than a Single File".
 That is optional.
 
-### Avoid interfering with the extension system: does not meet as it stands
+### Avoid interfering with the extension system: meets
 
 The rule: "Extensions which modify, reload or interact with other extensions or
 the extension system are generally discouraged. While not strictly prohibited,
 these extensions will be reviewed on a case-by-case basis and may be rejected
-at the reviewer's discretion." Two things fall under it.
+at the reviewer's discretion." One thing could be read this way, and it is
+never in what ships:
 
-1. **`extension.js` stages `lib/`.** On every `enable()` it hashes `lib/`,
-   copies it into `$XDG_RUNTIME_DIR/games-menu/lib-<stamp>/`, deletes every
-   other stage there, and imports `app.js` from the copy with
-   `await import('file://...')`. The purpose is to defeat GJS's module cache.
-   That is the extension system's own behaviour, and working around it is what
-   the rule describes. Reviewers will also see synchronous file copying and
-   recursive deletion in `enable()`, and code imported from outside the
-   extension directory. In every install EGO produces it is dead code, because
-   nobody edits an installed copy. Hard to defend; move it out of what ships
-   ([below](#the-development-path-in-extensionjs)).
-2. **Dash to Panel.** `libraryButton.js` reads `global.dashToPanel`, listens
-   for its `panels-created` and for `Main.extensionManager`'s
-   `extension-state-changed`, and wraps `_updateGroupedElements` on Dash to
-   Panel's primary panel so the Games button sits after Show Apps. That is
-   interacting with another extension. It is defensible. It serves a common
-   setup, the wrapper chains and comes off only while it is outermost, and
-   without Dash to Panel the button goes into the dash. Anything unexpected in
-   `_attach()` is caught and warned about. Expect a question, and answer it in
-   the description ("adds its button to Dash to Panel's panel when that is
-   enabled"). [private-api.md](private-api.md) has the details.
+`scripts/dev-extension.js`, the entry point `make link` installs in place of
+`src/extension.js`, hashes `lib/` on every `enable()`, copies it into
+`$XDG_RUNTIME_DIR/games-menu/lib-<stamp>/`, deletes every other stage there,
+and imports `app.js` from the copy with `await import('file://...')`. The
+purpose is to defeat GJS's module cache during development. It is not in the
+zip, and `check_pack` (`scripts/dev.sh cmd_pack`) fails the build if it ever
+ends up there — see [private-api.md](private-api.md#not-shell-internals-staging-lib).
+The shipped `src/extension.js` has none of this: a plain, static `import` of
+`lib/app.js`.
+
+**Dash to Panel.** `libraryButton.js` reads `global.dashToPanel`, listens
+for its `panels-created` and for `Main.extensionManager`'s
+`extension-state-changed`, and wraps `_updateGroupedElements` on Dash to
+Panel's primary panel so the Games button sits after Show Apps. That is
+interacting with another extension. It is defensible. It serves a common
+setup, the wrapper chains and comes off only while it is outermost, and
+without Dash to Panel the button goes into the dash. Anything unexpected in
+`_attach()` is caught and warned about. Expect a question, and answer it in
+the description ("adds its button to Dash to Panel's panel when that is
+enabled"). [private-api.md](private-api.md) has the details.
 
 ### Code must not be obfuscated: meets
 
@@ -327,25 +313,18 @@ Practices' 200-character limit. They are the long description strings for the
 Games page's Files group and the Controls page's key and controller groups.
 Split them.
 
-### No excessive logging: needs a trim
+### No excessive logging: meets
 
 "The log should only be used for important messages and errors." Three lines
-are written when nothing is wrong:
-
-- `Enabled from <stage dir>` in `extension.js` `enable()`. It is logged at every
-  login and unlock, and every time the shell re-enables the extension because
-  one enabled before it was disabled (`_callExtensionDisableWithRebase` in
-  `extensionSystem.js` disables and re-enables every extension after the one
-  turned off).
-- `Rebuilt` in `GamesMenuApp._scheduleRebuild()`. It is logged after every burst
-  of setting changes, every rescan landing, and every scale-factor change.
-- `libmanette is not installed; game controllers are not read.` in
-  `Controls._startPads()`. It is logged at every enable on a machine without
-  libmanette, because `gamepad-enabled` defaults to true. That is an expected
-  state, not an error.
-
-Every other `console.*` call is on a failure path. Drop the first two lines.
-Say the third once, or leave it to the preferences.
+used to be written when nothing was wrong — `Enabled from <stage dir>`,
+`Rebuilt` in `GamesMenuApp._scheduleRebuild()`, and the missing-libmanette
+notice in `Controls._startPads()` — and all three now go through
+`lib/log.js`'s `note()`, which only `scripts/dev-extension.js` turns on. The
+shipped extension calls `setVerbose()` nowhere, so `note()` is a no-op and
+these lines never reach the journal; every `console.*` call left in the shipped
+code is on a failure path. `Enabled from` is also gone from the shipped path
+entirely — only the dev entry point logs it, since only it stages anything to
+name.
 
 ### Extensions should not force dispose a GObject: meets
 
@@ -386,7 +365,8 @@ Against each part of the rule:
   images. GJS can do all of that, with `Soup` 3 for HTTPS and `GdkPixbuf`
   for scaling, and the scanner already falls back to GdkPixbuf. A reviewer
   cannot review the Python, by the rule's own words, and will ask for a port.
-- **OSI licence:** there is no licence at all ([Licensing](#licensing-needs-a-file)).
+- **OSI licence:** meets. `LICENSE` (GPL-2.0-or-later, OSI-approved) is at the
+  top of the repo and ships in the zip ([Licensing](#licensing-meets)).
 
 The fix is a GJS port. It can be a script under `backend/` run by the
 preferences as now (`gjs -m <path>`). Or it can run in the preferences process
@@ -497,13 +477,12 @@ Practices lists the patterns reviewers look for. None of the notices it
 describes ("Generated with AI…") is in the code. The style is consistent. What
 a reviewer would find:
 
-- **Comments.** 1,231 of the 4,794 non-blank lines in the shipped JavaScript
-  (26%) are comments, and file headers run 10 to 30 lines. They explain why
-  rather than what, which is what the guidelines want. But the volume is
-  unusual, and several cite the shell's source by file and line number (in
-  `mediaGrid.js`, `mediaMenu.js`, `panel.js`, `widgets.js`, `libraryButton.js`
-  and `libraryWindow.js`). Those numbers go stale with every GNOME release and
-  read as generated. Keep the reason and drop the line numbers.
+- **Comments.** File headers run 10 to 30 lines, and several cite the shell's
+  own source by file (`mediaGrid.js`, `mediaMenu.js`, `panel.js`, `widgets.js`,
+  `libraryButton.js` and `libraryWindow.js`). They explain why rather than
+  what, which is what the guidelines want, and none of them cite a line number
+  any more — those would go stale with every GNOME release and read as
+  generated, so only the file and the function or concept are named.
 - **Optional chaining on guaranteed APIs** ("Avoid Unnecessary Checks"):
   - `scroll.vadjustment ?? scroll.get_vadjustment?.()` in `lazyList.js`
     `fillOnScroll()`: `St.ScrollView` has `vadjustment` in every claimed
@@ -523,13 +502,13 @@ a reviewer would find:
   (`beforeLaunch?.()`, `onActivate?.()`, `onComplete?.()`, `this._prepare?.()`).
   The `Clutter.ClickGesture` test in `MediaPanel._addClickAway()` is a real
   48-versus-49 branch, and goes if 48 is dropped.
-- **try/catch that only swallows** ("Avoid Unnecessary try-catch Wrappers"):
-  - `extension.js` `enable()` catches everything and logs it. In 50.5,
-    `_callExtensionEnable()` awaits `enable()` and marks the extension ACTIVE
-    unless it throws. So any failure to load or build becomes an extension that
-    reports itself as running and does nothing, and the Extensions app shows no
-    error;
-  - `extension.js` `disable()` hides whatever `GamesMenuApp.disable()` throws;
+- **try/catch that only swallows** ("Avoid Unnecessary try-catch Wrappers").
+  The shipped `extension.js` no longer has one: `enable()` and `disable()` are
+  a plain, static `import` with no try/catch, so a throw from either reaches
+  the shell. `scripts/dev-extension.js`, the dev-only entry point, still
+  catches everything in its `enable()` and logs it — reasonable there, since
+  its job is surviving a bad `import()` across edits, and it never ships. One
+  wrapper remains in the shipped code:
   - the `release` of `LibraryButton._attachToDash()` wraps
     `dash.disconnectObject(this)` and `destroy()` in an empty catch. That is
     Best Practices' own example of a wrapper that is not needed.
@@ -539,8 +518,9 @@ a reviewer would find:
   reading a key file, starting the scanner, and Dash to Panel's
   `updateElementPositions()` on a panel that may be going away.
 - **Lifecycle flags** ("Lifecycle and Destruction State"). `this._enabling`
-  exists only because the staging makes `enable()` async, and it goes with it.
-  `Controls._starting` guards the async libmanette import against a
+  exists only in `scripts/dev-extension.js`, because staging makes its
+  `enable()` async; the shipped `extension.js` is synchronous and has no such
+  flag. `Controls._starting` guards the async libmanette import against a
   `disable()` that lands during it; that is a real race, so keep it.
   `released` in `LibraryButton._attachToPanel()` is set by the box's
   `destroy` so the box is not destroyed twice when Dash to Panel has already
@@ -550,9 +530,9 @@ a reviewer would find:
   `` `★ ${item.rating}` `` in a pill. Best Practices ("Icons vs. Emojis") asks
   for `St.Icon` rather than Unicode symbols; `starred-symbolic` is the shell's.
 
-### metadata.json must be well-formed: needs two fixes
+### metadata.json must be well-formed: meets
 
-Remove `version` and add `url`. See [the table above](#metadatajson).
+`version` is absent and `url` is set. See [the table above](#metadatajson).
 
 ### Session modes: meets
 
@@ -570,22 +550,20 @@ The ID `org.gnome.shell.extensions.games-menu` and the path
 named `<schema-id>.gschema.xml`, the XML is in the zip, and no compiled schema
 ships. `glib-compile-schemas --strict --dry-run src/schemas` passes.
 
-The `<schemalist>` carries `gettext-domain="gnome-shell-extensions"`. That is
-the domain of GNOME's own extensions package, not this extension's. Nothing is
-translated, so it does no harm, but a reviewer may read it as copied. Drop it,
-or use `games-menu`.
+The `<schemalist>` carries no `gettext-domain`. It used to carry
+`gettext-domain="gnome-shell-extensions"`, the domain of GNOME's own extensions
+package rather than this one's — dropped rather than renamed, since nothing
+here is translated.
 
-### Licensing: needs a file
+### Licensing: meets
 
 GNOME Shell is GPL-2.0-or-later and "derived works like extensions MUST be
 distributed under compatible terms". The Python scripts also need "an OSI
-approved license" while they ship. The repo has no licence file, and no source
-file carries a licence header. Add one (for example GPL-2.0-or-later) as
-`LICENSE` at the top of the repo.
-
-`make pack` will not pick it up on its own: `cmd_pack` packs a copy of `src/`,
-and `gnome-extensions pack` adds no licence file by itself. Copy it into the
-stage and add `--extra-source=LICENSE`.
+approved license" while they ship. `LICENSE` (the GPL-2.0 text; the project is
+GPL-2.0-or-later) is at the top of the repo, and `cmd_pack` copies it into the
+staging directory and names it with `--extra-source=LICENSE`, since
+`gnome-extensions pack` adds no licence file by itself and only packs what is
+in the staged copy.
 
 `panel.js` says it is the shell's `AppFolderDialog` with the folder taken out.
 Whatever came from `appDisplay.js` is GNOME Shell's GPL-2.0-or-later code, which
@@ -606,9 +584,9 @@ and artwork, and multimedia.
   most a request to reword. Keep logos out.
 - **Artwork.** The zip ships no game artwork: its files are code, the schema,
   the stylesheet, which has no `url()`, and one icon, the button's gamepad
-  (`icons/library-symbolic.svg`, a single path from the author's own Slider
-  Overlay). The preferences' page icons are the theme's, and placeholders are
-  drawn in `widgets.js`.
+  (`icons/library-symbolic.svg`, a single path drawn for this extension). The
+  preferences' page icons are the theme's, and placeholders are drawn in
+  `widgets.js`.
   Covers and backdrops arrive at runtime on the user's machine, copied from the
   Steam client's own cache and PCSX2's covers folder or downloaded from Valve's
   CDN and IGDB. The Code of Conduct section allows for that ("extensions may be
@@ -622,6 +600,16 @@ and artwork, and multimedia.
   `scripts/demo_library.py`, taken with `./scripts/nested.sh start --clean
   --demo`. Use those, or new ones taken the same way.
 
+### IGDB attribution: still open
+
+IGDB's terms require crediting them wherever their data is shown, not only
+where it is fetched. Nothing in the preferences or the library currently says
+so: a PS2 disc's title, synopsis and cover art can all come from IGDB
+(`metadata.py`), and the UI shows them exactly as it shows Steam-sourced data,
+with no attribution attached. Add "Games metadata is powered by IGDB.com",
+linked to `https://www.igdb.com`, wherever IGDB-sourced data appears — the
+detail pop-up for a PS2 disc at minimum, and the Games preferences page.
+
 ### Don't include unnecessary files: meets
 
 The zip holds what runs: the entry points, `lib/`, the stylesheet, the schema
@@ -629,11 +617,12 @@ and `backend/`. Bytecode and notes are stripped. `make pack` does not check the
 contents, though, so a stray file would ship
 ([Building the zip](#building-the-zip)).
 
-### Use a linter: recommended
+### Use a linter: meets
 
-There is no ESLint configuration in the repo. GNOME Shell's rules are on
-GitLab, as the guideline says, and running them once before the first upload is
-cheap.
+`eslint.config.mjs` is gjs.guide's recommended GJS configuration, run with
+`make lint`. It reports zero errors; the warnings it leaves (chained
+assignment, one function over the complexity threshold) are the kind Best
+Practices treats as judgement calls rather than rules.
 
 ## Private API
 
@@ -651,134 +640,69 @@ it does:
 
 The part that is not checked is `mediaGrid.js`, which subclasses `BaseAppView`
 (read as `AppDisplay`'s prototype), `AppGrid`, `AppViewItem`, `IconGridLayout`
-and `BaseIcon` at module scope. A change there makes the import of `lib/` throw.
-Today that becomes an extension reporting itself ACTIVE and doing nothing. With
-the shipped `extension.js` fixed, it becomes an error shown in the Extensions
-app, which is what reviewers want.
+and `BaseIcon` at module scope. A change there makes the static `import` of
+`lib/app.js` throw, which becomes an error shown in the Extensions app — what
+reviewers want, since the shipped `extension.js` has no try/catch of its own to
+hide it.
 
-## The development path in extension.js
+## The development entry point
 
-**Still open.** GJS caches a module by URL for the life of the shell. So an
-edit under `lib/` is not picked up without logging out, unless `lib/` is
-imported from a new URL each time. `extension.js` does that staging in the file
-that ships. It copies `lib/` into a directory named after a checksum of its
-contents, sweeps the others, and imports from the copy. See CLAUDE.md, "How it
-fits together", item 2. A reviewer reads this as working around the extension
-system ([above](#avoid-interfering-with-the-extension-system-does-not-meet-as-it-stands)),
-and in an EGO install it does nothing useful. The shape of the fix:
+GJS caches a module by URL for the life of the shell, so an edit under `lib/`
+is not picked up without logging out, unless `lib/` is imported from a new URL
+each time. That staging is not in what ships: it lives entirely in
+`scripts/dev-extension.js`, which `make link` installs as `extension.js` in the
+development install, and it never reaches a reviewer or an EGO download. The
+shipped `src/extension.js` is a plain, static `import` of `lib/app.js`, with
+synchronous `enable()`/`disable()` and no try/catch — see [Avoid interfering
+with the extension system](#avoid-interfering-with-the-extension-system-meets)
+above, [private-api.md](private-api.md#not-shell-internals-staging-lib) for how
+the dev entry point stages `lib/`, and CLAUDE.md's "How it fits together" for
+the full mechanism.
 
-- `src/extension.js`, the entry point that ships, imports `./lib/app.js`
-  statically. Its `enable()` and `disable()` are synchronous and carry no
-  try/catch:
-  ```js
-  enable() {
-      this._app = new GamesMenuApp(this);
-      this._app.enable();
-  }
-
-  disable() {
-      this._app.disable();
-      this._app = null;
-  }
-  ```
-- `GamesMenuApp.enable()` undoes itself when it throws. It calls `disable()`
-  and rethrows, because the shell never calls `disable()` for an extension
-  whose `enable()` threw. `_callExtensionDisableWithRebase()` returns unless
-  the state is ACTIVE. Rethrowing keeps the shell's error state, so the failure
-  shows in the Extensions app.
-- `scripts/dev-extension.js` becomes the development entry point: today's
-  staging, the async `enable()` with its `_enabling` guard, and the
-  `Enabled from` line.
-- `scripts/dev.sh link` builds the extension directory as a real directory of
-  links. There is one link for each entry in `src/` except `extension.js`,
-  which links to `scripts/dev-extension.js`. Today `link` makes the whole
-  directory one symlink to `src/`. `make reload` goes on picking up edits.
-
-After that, what is in the repository is what ships, apart from `scripts/`,
-which never ships. The development link never runs `src/extension.js`, so test
-the shipped entry point from an installed zip
-([Testing the zip](#testing-the-zip-before-uploading)). CLAUDE.md's "`src/` is
-an exact mirror of the installed extension directory", its item 2, and the
-staging gotcha describe the current arrangement and would change with it.
-
-The alternative is to swap in a plain `extension.js` at pack time. That would
-ship a file that is not in the repository its `url` points at, and two entry
-points would drift.
+Because the two entry points differ, test the shipped one from an installed
+zip, not from the development link
+([Testing the zip](#testing-the-zip-before-uploading)).
 
 ## Things a reviewer will notice, and the minimal fix
-
-### Done
-
-1. **Settings.** The schema ID is in `metadata.json` only, and `getSettings()`
-   is called without arguments in both processes.
-2. **The schema** ships as XML only and passes a strict compile.
-3. **Nothing unshipped in the zip.** `make pack` strips bytecode and the
-   `CLAUDE.md` notes from a copy before packing.
-4. **Main-loop sources** are removed next to where they are created and again
-   on the way out ([the table](#remove-main-loop-sources-meets)).
-5. **No shortcut is taken by default.** `games-shortcut` is empty, grabbed with
-   `Main.wm.addKeybinding()` when set, and removed in `disable()`.
-6. **Controllers are optional and scoped.** libmanette is loaded on demand. The
-   extension works without it, and pads are acted on only while the library is
-   up (Guide excepted, never over a modal grab).
-7. **Wrappers on shell and Dash to Panel methods chain.** They come off only
-   while they are outermost, so disabling this extension never unhooks
-   another's.
-8. **Keys stay out of command lines and logs.** The scanner reads `credentials`
-   out of GSettings itself. The key-file reader logs a path on failure, never
-   a value.
-
-### Still open
 
 1. **The Python scanner.** Port it to GJS
    ([Scripts and binaries](#scripts-and-binaries-does-not-meet-as-it-stands)).
    This is the likeliest rejection.
-2. **The development path in `extension.js`.** Move the staging to
-   `scripts/dev-extension.js` and ship a static, synchronous entry point
-   without the try/catch. `GamesMenuApp.enable()` undoes itself on a throw
-   ([above](#the-development-path-in-extensionjs)).
-3. **`metadata.json`.** Remove `version` and add `url`. Add `version-name`, write
-   a fuller description (the points in [metadata.json](#metadatajson)), and
-   narrow `shell-version` to what has been run.
-4. **A licence.** Add `LICENSE` at the top of the repo, and have `cmd_pack`
-   copy it into the stage and name it with `--extra-source`.
-5. **First run.** Say in the description what it needs, add a screenshot (from
-   `docs/screenshots/`), and
-   decide whether an empty library should still get its button
+2. **First run.** Say in the description what it needs, add a screenshot (from
+   `docs/screenshots/`), and decide whether an empty library should still get
+   its button
    ([Extensions must be functional](#extensions-must-be-functional-a-risk-worth-knowing)).
-6. **Logging.** Drop `Enabled from` (it goes with item 2) and `Rebuilt`. Say
-   the missing libmanette once, or leave it to the preferences.
-7. **Checks and wrappers.** Remove the `?.` on `vadjustment`,
+3. **IGDB attribution.** Show "Games metadata is powered by IGDB.com", linked,
+   wherever IGDB-sourced data appears
+   ([above](#igdb-attribution-still-open)).
+4. **Checks and wrappers.** Remove the `?.` on `vadjustment`,
    `inhibit_system_shortcuts`, `restore_system_shortcuts` and `_device`, and
    use `instanceof St.Widget` in `ensureStyleDeep()`. Remove the empty catch
-   around `disconnectObject()`/`destroy()` in `_attachToDash()`. Trim the
-   comments and drop the shell line numbers from them.
-8. **Play.** Build the argv in the shell from the platform, the app id and the
+   around `disconnectObject()`/`destroy()` in `_attachToDash()`.
+5. **Play.** Build the argv in the shell from the platform, the app id and the
    disc. Open `steam://` with `Gio.AppInfo.launch_default_for_uri_async()`
    rather than spawning `xdg-open`.
-9. **The file monitor.** Use `connectObject()`/`disconnectObject()` for its
+6. **The file monitor.** Use `connectObject()`/`disconnectObject()` for its
    `changed` handler.
-10. **Small ones:**
+7. **Small ones:**
     - replace the `★` with an `St.Icon`;
     - split the three over-long strings in `prefs.js`;
-    - drop the schema's `gettext-domain`;
-    - send the IGDB secret in the POST body;
+    - send the IGDB secret in the POST body, not the token URL's query string;
     - say in the preferences that keys are stored in plain text;
     - drop or rework the `~/Documents/keys` import;
     - give the Rescan subprocess a cancellable;
     - disconnect the preferences' settings handlers on `close-request`;
     - replace `Gtk.show_uri()`, deprecated since GTK 4.10, with
       `Gtk.UriLauncher`;
-    - add a content check to `cmd_pack`;
     - optionally, split `prefs.js` into a `prefs/` directory.
 
 ## Uploading
 
 - **Web:** log in at https://extensions.gnome.org/upload/, choose
-  `dist/games-menu@jackt.shell-extension.zip`, and accept the terms.
+  `dist/games-menu@jackicus.shell-extension.zip`, and accept the terms.
 - **Command line** (gnome-extensions 49 and later; gjs.guide,
   [Port Extensions to GNOME Shell 49](https://gjs.guide/extensions/upgrading/gnome-shell-49.html)):
-  `gnome-extensions upload --accept-tos dist/games-menu@jackt.shell-extension.zip`.
+  `gnome-extensions upload --accept-tos dist/games-menu@jackicus.shell-extension.zip`.
   It prompts for the EGO username and password. `--user`, `--password` and
   `--password-file` exist for CI. gjs.guide warns that "Using the password in
   a command option risks exposing it in logs, the environment or the
@@ -792,7 +716,7 @@ Before every upload:
 
 1. Bump `version-name`.
 2. Run `glib-compile-schemas --strict --dry-run src/schemas`.
-3. Run `make pack`, and read `unzip -l dist/games-menu@jackt.shell-extension.zip`.
+3. Run `make pack`, and read `unzip -l dist/games-menu@jackicus.shell-extension.zip`.
 4. Run `make uninstall`, install that zip, log out and back in, press Rescan in
    its preferences, and go through the checklist in
    [compatibility.md](compatibility.md) on each version you claim.

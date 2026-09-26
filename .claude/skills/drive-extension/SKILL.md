@@ -192,7 +192,7 @@ rest are from other extensions, loaded alongside.
   overview closing and reopening the overview onto the one pressed.
 - **The mirror needs GStreamer's PipeWire plugin.** If `mirror on` fails, use
   `start --headless` and screenshots, and tell the user.
-- **Driving the prefs window:** `./scripts/nested.sh run gnome-extensions prefs games-menu@jackt &`
+- **Driving the prefs window:** `./scripts/nested.sh run gnome-extensions prefs games-menu@jackicus &`
   opens it inside the nested session, where `shot` and the mirror both show it.
   The Extensions app outlives its window and keeps the `prefs.js` it first
   imported, so after editing it kill *the nested one* before reopening — the

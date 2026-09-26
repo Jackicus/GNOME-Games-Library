@@ -43,11 +43,14 @@ because `src/` is changing; functions are named instead.
 the only sign. The last two are public API, listed because 51 removed them
 ([compatibility.md](compatibility.md#gnome-51)).
 
-A throw that reaches `GamesMenuApp.enable()` never reaches the shell.
-`extension.js` catches it and logs `[Games Menu] Failed to load lib/app.js:`,
-and the shell records a successful enable. So wherever an entry below says
-`enable()` throws, the extension shows as on in the Extensions app and nothing
-is on screen ([below](#not-shell-internals-staging-lib)).
+A throw that reaches `GamesMenuApp.enable()` reaches the shell: it calls
+`disable()` on whatever it managed to build and rethrows, and `extension.js`
+carries no try/catch of its own, so `_callExtensionEnable()` leaves the
+extension disabled with the error shown in the Extensions app and in the
+journal. So wherever an entry below says `enable()` throws, that is what shows
+— not a silent "on" with nothing built. The dev-only entry point,
+`scripts/dev-extension.js`, is different: it does catch and log a failed
+`import()` ([below](#not-shell-internals-staging-lib)).
 
 ## The menu library (mediaMenu.js)
 
@@ -777,16 +780,22 @@ Nothing is logged.
 
 ## Not shell internals: staging lib/
 
-`extension.js`:
+This is `scripts/dev-extension.js`, the entry point `make link` installs in
+place of `src/extension.js`. It never ships; `make install`/`make pack` use
+the plain `src/extension.js` shown at the top of this page, which has no
+staging, no try/catch, and imports `lib/app.js` straight from `src/`.
 
 ```js
 async enable() {
-    const enabling = this._enabling = {};
+    const enabling = {};
+    this._enabling = enabling;
     try {
         const runDir = this._stageLib();
         const module = await import(`file://${runDir}/app.js`);
+        const log = await import(`file://${runDir}/log.js`);
         if (this._enabling !== enabling)
             return;
+        log.setVerbose(true);
         this._app = new module.GamesMenuApp(this);
         this._app.enable();
         console.log(`[Games Menu] Enabled from ${runDir}`);
@@ -797,26 +806,28 @@ async enable() {
 ```
 
 `_stageLib()` copies `lib/*.js` into
-`$XDG_RUNTIME_DIR/games-menu/lib-<stamp>/`. The stamp is a SHA-256 of each
+`$XDG_RUNTIME_DIR/games-menu/lib-<stamp>/`, building beside its final name and
+renaming it into place so a shell that goes down mid-copy leaves nothing a
+later `enable()` mistakes for a finished stage. The stamp is a SHA-256 of each
 file's name, size and modification time. It then deletes every other stage in
 that folder, and `enable()` imports from the copy. GJS caches a module by URL
 for the life of the shell, so this is how an edit under `lib/` is picked up by
 a disable and enable without logging out. An unlock re-enables into the same
 stamp, and so into the modules GJS already has.
 
-It is not a shell internal, but a reviewer will ask about it. It is in the zip,
-it copies and deletes files synchronously in `enable()`, and it imports code
-from outside the extension directory.
-[publishing.md](publishing.md#the-development-path-in-extensionjs) has the plan
-to move it out of what ships. Two consequences for this page:
+It is not a shell internal, and it never reaches a reviewer: it is not in the
+zip, and the code that copies and deletes files synchronously and imports from
+outside the extension directory only ever runs under `make link`. Two
+consequences, in development only:
 
 - **GType names.** The shell sets `GObject.gtypeNameBasedOnJSPath = true`
   (`ui/environment.js` at every tag checked), so each class's GType name comes
   from its module's path, and each stage registers its classes under new
   names. An unlock reuses the stage and registers nothing. Each edit leaves the
   previous stage's types registered for the life of the shell: one set per
-  edit, in development only.
-- **Errors.** The `catch` also catches a throw from `GamesMenuApp.enable()`, and
-  logs it as a load failure. The shell never sees it, so the extension shows as
-  on with nothing built. That is what every "`enable()` throws" above looks
-  like.
+  edit.
+- **Errors.** The `catch` here also catches a throw from `GamesMenuApp.enable()`,
+  and logs it as a load failure rather than letting it reach the shell. That is
+  a dev-only difference from the shipped `extension.js`, which has no
+  try/catch and lets a throw from `GamesMenuApp.enable()` disable the extension
+  with the error shown in the Extensions app.

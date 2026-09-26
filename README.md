@@ -9,7 +9,7 @@ library with proper cover art.<br>
 It opens in the overview next to your apps, and **Play** starts the game the
 way its launcher would.
 
-![GNOME Shell 48–50](https://img.shields.io/badge/GNOME_Shell-48--50-4a86cf?logo=gnome&logoColor=white)
+![GNOME Shell 50](https://img.shields.io/badge/GNOME_Shell-50-4a86cf?logo=gnome&logoColor=white)
 
 ![The Games library in the overview: two rows of six game covers where the app grid would be, with the Games button beside Show Apps in the dash](docs/screenshots/library.jpg)
 <sub>The library in the overview, opened from the **Games** button beside Show Apps.</sub>
@@ -103,7 +103,7 @@ Accessibility → Large Text.
 ## Install
 
 It isn't on extensions.gnome.org yet, so install it from source. You need GNOME
-Shell 48, 49 or 50, `make`, and Python 3 for the scanner. Nothing else: the
+Shell 50, `make`, and Python 3 for the scanner. Nothing else: the
 scanner uses the image libraries GNOME already ships, or
 [Pillow](https://python-pillow.org/) if you have it.
 
@@ -117,10 +117,10 @@ GNOME Shell only looks for new extensions when you log in. Log out, log back
 in, then turn it on:
 
 ```bash
-gnome-extensions enable games-menu@jackt
+gnome-extensions enable games-menu@jackicus
 ```
 
-Then open the preferences (`gnome-extensions prefs games-menu@jackt`) and press
+Then open the preferences (`gnome-extensions prefs games-menu@jackicus`) and press
 **Rescan** on the **Games** page. The first scan takes a while, since it looks
 every game up online; after that it only fetches what it hasn't seen. A
 **Games** button appears beside Show Apps — in the overview's dash, or in Dash
@@ -185,7 +185,7 @@ system journal, never to a terminal.
 make link      # install as a link to src/, so edits are live
 make reload    # apply your edits to the running shell, no logout needed
 make nested    # start a throwaway nested GNOME Shell, mirrored in a window
-make pack      # build dist/games-menu@jackt.shell-extension.zip
+make pack      # build dist/games-menu@jackicus.shell-extension.zip
 ```
 
 Edits to `extension.js` or `metadata.json` still need a log out and back in.

@@ -1,9 +1,13 @@
 # Compatibility
 
-`metadata.json` claims GNOME Shell 48, 49 and 50. Only 50 is on the development
-machine, and 48 and 49 are claimed from reading the shell's sources, not from
-running them. This page says what has been run, lists every code path that
-depends on the version, and says what to check first on each version.
+The code is built for GNOME Shell 48 to 50, but `metadata.json`'s
+`shell-version` currently claims only `["50"]`, the one version that's
+actually been run — 48 and 49 are audited against the shell's sources (below),
+not booted, so they're not claimed yet; the checklist at the end covers what
+adding one takes. This page lists every code path that depends on the
+version and says what to check first on each. Below, "claimed version"/
+"claimed floor" means this 48–50 design range, not literally what
+`metadata.json` lists today.
 
 ## What has been tested
 
@@ -50,12 +54,12 @@ How far that goes:
 
 Nothing else has been tested:
 
-- **GNOME 48 and 49** are claimed and have never been run. Every shell path in
-  [private-api.md](private-api.md) is present, with the same shape, at the
-  `48.0` and `49.0` tags. One code path differs between 48 and the later
-  versions, and it is chosen by feature test
+- **GNOME 48 and 49** are within the design range but not claimed, and have
+  never been run. Every shell path in [private-api.md](private-api.md) is
+  present, with the same shape, at the `48.0` and `49.0` tags. One code path
+  differs between 48 and the later versions, and it is chosen by feature test
   ([below](#closing-a-panel-from-the-shade-paneljs)).
-- **GNOME 51** is not claimed, and as written it will not work. It removed two
+- **GNOME 51** is outside the design range, and as written it will not work. It removed two
   calls this extension makes ([below](#gnome-51)).
 - **No X11 session.** 48 has one, 49 turns it off by default, and 50 removed it
   (gjs.guide, "Port Extensions to GNOME Shell 49" and "... 50"). Nothing in the
@@ -219,10 +223,11 @@ Blur my Shell off, the shade is back.
 ### Controllers (controls.js, prefs.js)
 
 libmanette is optional. Both processes load it only when it is wanted, with
-`import('gi://Manette')`. Without it the extension logs
-`[Games Menu] libmanette is not installed; game controllers are not read.` once
-and the preferences say the same. `gamepad-enabled` is on by default, so the
-shell process loads it at `enable()` when it is installed.
+`import('gi://Manette')`. Without it the shipped extension says nothing (the
+line is behind `lib/log.js`'s `note()`, which only the dev entry point turns
+on) and the preferences show the same message regardless. `gamepad-enabled` is
+on by default, so the shell process loads it at `enable()` when it is
+installed.
 
 - The import names no version, so GJS takes whichever Manette typelib is
   installed. Only `Manette-0.2` exists here.
@@ -289,16 +294,21 @@ The Rescan button runs `python3 <extension>/backend/scan_library.py
 
 ### Smaller things
 
-- **`enable()` is async and `disable()` is not**, in `src/extension.js`. The
-  shell awaits `enable()` (`await extension.stateObj.enable()` in
-  `extensionSystem.js` at `48.0`, `49.0`, `50.5` and `51.0`). GNOME 51 throws
-  if `disable()` is async; this one is not.
-- **A throw inside `GamesMenuApp.enable()` does not reach the shell.**
-  `extension.js` catches it and logs `[Games Menu] Failed to load lib/app.js:`
-  with the error, even when the import succeeded and `enable()` itself threw.
-  The shell then records a successful enable, and the Extensions app shows the
-  extension as on, with nothing on screen. On any new version, read the
-  journal, not the Extensions app.
+- **`enable()`/`disable()` synchronity.** The shipped `src/extension.js` has a
+  synchronous `enable()`/`disable()` (a plain, static `import` of `lib/app.js`),
+  so there's nothing to check here. `scripts/dev-extension.js`, the dev-only
+  entry point `make link` installs, has an `async enable()` because it awaits
+  the dynamic `import()` of the staged `lib/app.js`; its `disable()` is
+  synchronous. The shell awaits `enable()` (`await extension.stateObj.enable()`
+  in `extensionSystem.js` at `48.0`, `49.0`, `50.5` and `51.0`), so neither
+  shape is a version gap on any claimed version; it would only matter if GNOME
+  51's stricter rule (an async `disable()` throws) were relevant, which it is
+  not here, since neither entry point's `disable()` is async.
+- **A throw inside `GamesMenuApp.enable()` reaches the shell.** It calls
+  `disable()` on whatever it managed to build and rethrows, so `extension.js`'s
+  own `enable()` throws too. `_callExtensionEnable()` then leaves the extension
+  disabled with the error shown in the Extensions app and in the journal,
+  rather than recording a silent success with nothing on screen.
 - **`Clutter.Stage.get_key_focus()` returns `null` when nothing has focus, from
   48** (gjs.guide, 48 port page). The panels take the keyboard back when it is
   dropped, and they test for exactly that `null`.
@@ -309,8 +319,11 @@ The Rescan button runs `python3 <extension>/backend/scan_library.py
   still works.
 - **GType names** come from the module's path, because the shell sets
   `GObject.gtypeNameBasedOnJSPath = true` (`ui/environment.js` at `48.0`,
-  `49.0`, `50.5` and `51.0`). So each staged copy of `lib/` registers its own
-  types ([private-api.md](private-api.md#not-shell-internals-staging-lib)).
+  `49.0`, `50.5` and `51.0`). Under the dev entry point, that means each staged
+  copy of `lib/` registers its own types
+  ([private-api.md](private-api.md#not-shell-internals-staging-lib)); the
+  shipped `extension.js` imports `lib/` straight from `src/`, so it registers
+  one set of types for the life of the shell.
 
 ## GNOME 51
 
@@ -365,19 +378,27 @@ Dash to Panel 74 claims 51. Blur my Shell 72 does not.
    `_viewBox`.
 4. Install the zip rather than the development link: `make uninstall`, then
    `make pack`, then
-   `gnome-extensions install dist/games-menu@jackt.shell-extension.zip`, then
-   log out and in, and enable it. This tests what users get, including the
-   schema compiled on install and the `backend/` inside the installed copy.
-   **Do not use `install --force` over the link.** `make link` makes the
-   extension directory a symlink to `src/`, and `--force` removes the old
-   directory with `file_delete_recursively()` (extensions-tool `main.c`). That
-   enumerates with `G_FILE_QUERY_INFO_NONE`, so it follows the link and deletes
-   what is in `src/`. `make uninstall` removes only the link. `make link` puts
-   it back afterwards. See also
+   `gnome-extensions install dist/games-menu@jackicus.shell-extension.zip`, then
+   log out and in, and enable it. This tests what users get through the shipped
+   `extension.js`, including the schema compiled on install and the `backend/`
+   inside the installed copy. The dev link's entry point
+   (`scripts/dev-extension.js`) and the shipped one (`src/extension.js`)
+   differ, so this first pass should go through the real zip; once the UUID is
+   registered, later iteration on a version-gated code path can go back to
+   `make link`, since `lib/`, `prefs.js`, `stylesheet.css` and the schema are
+   shared between the two paths either way.
+   **Do not use `install --force` over the link.** `make link` builds the
+   extension directory as a directory of links into `src/`, and `--force`
+   removes the old directory with `file_delete_recursively()` (extensions-tool
+   `main.c`). That enumerates with `G_FILE_QUERY_INFO_NONE`, so it follows each
+   link and deletes what is in `src/`. `make uninstall` removes only the
+   directory of links. `make link` puts it back afterwards. See also
    [publishing.md](publishing.md#testing-the-zip-before-uploading).
-5. `make logs '10 min ago'` should show `Enabled from`, and no `TypeError`,
-   `Failed to load lib/app.js`, `The overview is not laid out as expected` or
-   `No button beside Show Apps`.
+5. `make logs '10 min ago'` should be silent through enable, use and disable —
+   the shipped extension logs only failures — with no `TypeError`, `Failed to
+   load lib/app.js`, `The overview is not laid out as expected` or `No button
+   beside Show Apps`. Testing through `make link` instead logs `Enabled from`
+   on success, from `scripts/dev-extension.js`.
 6. Press Rescan in the preferences. The count updates, the journal says
    `Rebuilt`, and a library that was up comes back up.
 7. **The menu library.** Press the button on the desktop: the overview opens

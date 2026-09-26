@@ -4,8 +4,8 @@
 // The button is the shell's own `ShowAppsIcon` — a DashItemContainer around a
 // `show-apps` toggle with a BaseIcon in it — subclassed for its icon and its
 // label, so hover, focus, the tooltip and the dash's sizing all come from the
-// dash (js/ui/dash.js:188-218). It sits in the dash, or in Dash to Panel's
-// panel when that has taken the dash away.
+// dash (`dash.js`). It sits in the dash, or in Dash to Panel's panel when that
+// has taken the dash away.
 //
 // Both places the library opens in are opened from it: the "menu" library
 // puts a grid in the overview's app-grid slot, the "modal" library pops a

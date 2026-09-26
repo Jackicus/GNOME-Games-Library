@@ -18,7 +18,7 @@
 #
 set -euo pipefail
 
-UUID="games-menu@jackt"
+UUID="games-menu@jackicus"
 CACHE_DIR="$HOME/.cache/games-menu"
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

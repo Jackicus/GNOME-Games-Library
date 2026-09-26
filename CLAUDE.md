@@ -1,6 +1,6 @@
 # Games Menu
 
-A GNOME Shell extension (UUID `games-menu@jackt`) that puts your installed games
+A GNOME Shell extension (UUID `games-menu@jackicus`) that puts your installed games
 — Steam, including libraries on other drives, and PlayStation 2 discs through
 PCSX2 — in a library beside Show Apps: in the overview's app-grid slot, or in
 a panel that pops out of its button. No window, no titlebar, nothing on the
@@ -37,11 +37,15 @@ Put new logic in those, not in the Makefile.
 
 ## Layout
 
-`src/` is an **exact mirror of the installed extension directory**. Installing is a
-plain copy or symlink, so there is no file list to keep in sync — add a file to
-`src/` and it ships.
+`src/` is an **exact mirror of the installed extension directory**, so there is
+no file list to keep in sync — add a file to `src/` and it ships. `make
+install`/`make pack` copy it or zip it as-is. `make link` instead builds a
+directory of links, one per top-level entry of `src/`, then replaces just the
+`extension.js` link with one to `scripts/dev-extension.js` (below) — so edits
+under `src/` are live without a reinstall, but the entry point differs from
+what ships.
 
-- `extension.js` — stages `lib/` and imports `app.js` (below).
+- `extension.js` — imports `app.js` and enables it (below).
 - `lib/app.js` — `GamesMenuApp`: settings, rebuilds, the browser, the detail
   pop-up, controls, the shortcut, and launching.
 - `lib/library.js` — `SECTIONS` (the one, `games`), reading `library.json`,
@@ -64,10 +68,8 @@ The section's identity — its key, its `games-` settings, its title, its icon �
 is `SECTIONS` in `lib/library.js`, and nothing else restates it: `prefs.js`
 imports that list and merges in only what its page says. What the button
 beside Show Apps is called and shows is `LIBRARY` beside it: its icon is a
-file of the extension's own in `icons/`, not a theme name — the gamepad from
-Slider Overlay's Games group, as Video Menu's button has that group's
-television — read from the extension's directory (`lib/` runs from a staged
-copy that holds nothing else) and `-symbolic`, so St recolours it as it does
+file of the extension's own in `icons/`, not a theme name — a gamepad, read
+from the extension's directory and `-symbolic`, so St recolours it as it does
 Show Apps. The section's `icon` stays a theme name, for its preferences page.
 
 Runtime data: `~/.cache/games-menu/` — `library.json`, `posters/`, `backdrops/`,
@@ -111,19 +113,27 @@ The JS treats an art path outside the cache as missing.
    GSettings itself under `--from-settings`, so neither the Rescan button nor
    `dev.sh scan` hands it a key; only a standalone run falls back to
    `$GAMES_MENU_IGDB_CLIENT_ID` / `$GAMES_MENU_IGDB_CLIENT_SECRET`.
-2. `extension.js` copies `lib/` into `$XDG_RUNTIME_DIR/games-menu/lib-<stamp>/`
-   and imports `app.js` from there, where `<stamp>` is a checksum of `lib/`'s
-   file contents (name, size, mtime), not a timestamp of the build. GJS caches
-   modules by URL for the life of the shell, and static imports between
-   sibling modules would resolve to the cached copies, so a directory that
-   changes name when the content changes is what lets a disable/enable pick up
-   edits **without restarting the shell** — that matters on Wayland, where you
-   can't `Alt+F2 r`. A screen lock disables the extension and unlocking
-   re-enables it (`session-modes` defaults to `['user']`), which is not an
-   edit: it stages the same checksum, skips the copy, and re-imports the same
-   URL, which GJS serves from its module cache rather than re-executing — so
-   an unlock re-enables into the same module graph the previous session used,
-   and only an edit's changed checksum ever builds a new one.
+2. `extension.js` is a plain entry point: `enable()` builds a `GamesMenuApp`
+   from a static `import` of `lib/app.js` and calls its `enable()`; `disable()`
+   is the reverse. That is what ships and what `make install`/`make pack` put
+   on disk. `make link` installs `scripts/dev-extension.js` as `extension.js`
+   instead, for development only — it never ships. GJS caches modules by URL
+   for the life of the shell, so re-importing `lib/` after an edit would hand
+   back the old code; `dev-extension.js` works around that by copying `lib/`
+   into `$XDG_RUNTIME_DIR/games-menu/lib-<stamp>/` on every `enable()` and
+   importing from there, where `<stamp>` is a checksum of `lib/`'s file
+   contents (name, size, mtime), not a timestamp of the build — a directory
+   that changes name when the content changes is what lets a disable/enable
+   pick up edits **without restarting the shell**, which matters on Wayland,
+   where there is no `Alt+F2 r`. A screen lock disables the extension and
+   unlocking re-enables it (`session-modes` defaults to `['user']`), which is
+   not an edit: under the dev entry point this stages the same checksum, skips
+   the copy, and re-imports the same URL, which GJS serves from its module
+   cache rather than re-executing — so an unlock re-enables into the same
+   module graph the previous session used. The shipped `extension.js` has none
+   of this: its static `import` of `lib/app.js` from `src/` is evaluated once,
+   the same way `extension.js` itself is, and there is no separate stage to
+   reuse or go stale.
 3. `GamesMenuApp` reads `library.json` and builds two things: a **browser** —
    `MediaMenu` or `LibraryWindow`, per `library-opens-in` — and the
    **`DetailDialog`** a pick pops up in. A file monitor on `library.json`
@@ -431,14 +441,17 @@ Everything below is what keeps them from breaking each other; keep it true.
 
 ## Gotchas
 
-- **`extension.js` itself is cached for the life of the shell.** `make reload`
-  picks up everything under `lib/`, `stylesheet.css` and the schema, but an edit to
-  `extension.js` or `metadata.json` needs a log out / log back in (or, for the
-  nested shell, `stop` + `start`).
+- **`extension.js` itself is cached for the life of the shell.** GJS caches a
+  module by URL for the process's life, and `extension.js`'s own URL never
+  changes, so `make reload` picks up everything under `lib/`, `stylesheet.css`
+  and the schema, but an edit to `extension.js` (`scripts/dev-extension.js`
+  under `make link`) or `metadata.json` needs a log out / log back in (or, for
+  the nested shell, `stop` + `start`).
 - **New UUIDs need a logout** for the same reason: the shell only scans for
-  unknown extension UUIDs at startup. `games-menu@jackt` is one.
-- **`make reload` is not optional.** Edits in `src/` are live on disk via the
-  symlink, but the shell holds the old module until the disable/enable cycle.
+  unknown extension UUIDs at startup. `games-menu@jackicus` is one.
+- **`make reload` is not optional.** Edits under `src/` are live on disk via
+  `make link`'s links, but the shell holds the old module until the
+  disable/enable cycle.
 - **Play is a real launch.** In the nested shell as anywhere: `xdg-open
   steam://…` reaches the user's running Steam. Never press it to test.
 - **A rounded background image must carry its radius inline.** St bakes the
@@ -513,12 +526,14 @@ Everything below is what keeps them from breaking each other; keep it true.
   input method's own events carry the same detail, and asking one of those for
   a key symbol is a Clutter assertion in the journal, twice per keystroke. Check
   `event.type() === Clutter.EventType.KEY_PRESS` first, exactly as the shell
-  does (`calendar.js:860`); `mediaMenu.js` `_force()` is the only such handler
+  does (`calendar.js`'s captured-event handler); `mediaMenu.js` `_force()` is the only such handler
   here.
 - **Never hardcode the repo path.** Resolve paths from `this.path` /
   `this.dir.get_uri()` in JS and `__file__` in Python — the extension has to work
-  from the installed copy, not just the symlink. Modules under `lib/` run from a
-  staging copy, so never derive resource paths from `import.meta.url` either.
+  from the installed copy, not just a dev link. Under `make link`, modules
+  under `lib/` run from a staging copy (`scripts/dev-extension.js`); shipped,
+  they run straight from `src/lib/` — the two locations differ, so never
+  derive a resource path from `import.meta.url` either.
 - **Never touch a game's folder synchronously.** A PS2 disc folder can sit on a
   network share behind a systemd automount that idles out, and the first stat
   after that blocks until it is mounted again — eleven seconds, measured. In
@@ -570,11 +585,13 @@ Everything below is what keeps them from breaking each other; keep it true.
   on HiDPI. `St.Icon.icon_size` is the one exception in the allocation
   direction: it is logical, so a size derived from physical px is *divided* by
   the scale factor, not multiplied (`widgets.js` `createArtwork`).
-- **The staged `lib/` copy survives a screen unlock, not just a reload.**
-  `extension.js` names the staging directory after a checksum of `lib/`'s file
-  contents (name, size, mtime), not the time it was built, so re-enabling after
-  a lock (GNOME disables every extension at lock and re-enables at unlock)
-  finds the same directory and re-imports from GJS's module cache rather than
-  copying and building again. Only an actual edit — which changes the checksum
-  — makes a new stage; the sweep on the next `enable()` removes whatever stage
-  is no longer current.
+- **Under the dev entry point, the staged `lib/` copy survives a screen
+  unlock, not just a reload.** `scripts/dev-extension.js` names the staging
+  directory after a checksum of `lib/`'s file contents (name, size, mtime),
+  not the time it was built, so re-enabling after a lock (GNOME disables every
+  extension at lock and re-enables at unlock) finds the same directory and
+  re-imports from GJS's module cache rather than copying and building again.
+  Only an actual edit — which changes the checksum — makes a new stage; the
+  sweep on the next `enable()` removes whatever stage is no longer current.
+  The shipped `extension.js` has no stage at all, so this only matters when
+  testing through `make link`/`make nested`.

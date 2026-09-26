@@ -41,7 +41,7 @@ import {createMediaView} from './mediaGrid.js';
 
 // The overview gives the dash no more than this share of its height, and
 // leaves this much of it between its rows (DASH_MAX_HEIGHT_RATIO and
-// VERTICAL_SPACING_RATIO, overviewControls.js:22-23, which it does not export).
+// VERTICAL_SPACING_RATIO, overviewControls.js, which it does not export).
 const DASH_MAX_SHARE = 0.16;
 const VERTICAL_SPACING_SHARE = 0.02;
 
@@ -394,12 +394,12 @@ export class MediaMenu {
         if (this._escapeId)
             return;
         // Keyed on the event type, as the date menu keys its own captures
-        // (dateMenu.js:923-931), so the pointer crossing the overview never
+        // (dateMenu.js), so the pointer crossing the overview never
         // reaches JS. The `key` detail is wider than a key press — releases
         // and the input method's own events carry it too — and asking one of
         // those for a key symbol is a Clutter assertion, so the type is
         // checked first, exactly as the date menu's handler does
-        // (calendar.js:860).
+        // (`calendar.js`'s captured-event handler).
         this._escapeId = global.stage.connect('captured-event::key', (_stage, event) => {
             if (event.type() !== Clutter.EventType.KEY_PRESS ||
                 event.get_key_symbol() !== Clutter.KEY_Escape ||
@@ -448,11 +448,11 @@ export class MediaMenu {
     // since what the slot was last given says nothing of which of the two
     // sizes that was.
     //
-    // Step for step the shell's `vfunc_allocate` (overviewControls.js:155-183),
-    // the dash included whether or not it is visible: the shell measures it
-    // either way, and Dash to Panel hides it. Reading the visibility instead
-    // left this estimate a dash-height taller than the slot the shell went on
-    // to hand out.
+    // Step for step the shell's ControlsManagerLayout `vfunc_allocate`
+    // (overviewControls.js), the dash included whether or not it is visible:
+    // the shell measures it either way, and Dash to Panel hides it. Reading
+    // the visibility instead left this estimate a dash-height taller than the
+    // slot the shell went on to hand out.
     _slotSize() {
         if (this._slot)
             return this._slot;

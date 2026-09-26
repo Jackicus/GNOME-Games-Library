@@ -1,8 +1,8 @@
 // The "modal" library: the games grid inside the folder's panel.
 //
 // The shell's own FolderView is a BaseAppView sitting in an AppFolderDialog
-// (appDisplay.js:2085) — a grid of apps inside the panel that zoomed out of
-// the folder's icon. This is that shape with posters: `panel.js` is the panel,
+// (appDisplay.js) — a grid of apps inside the panel that zoomed out of the
+// folder's icon. This is that shape with posters: `panel.js` is the panel,
 // `mediaGrid.js` the grid, and the icon it comes out of is the library's
 // button beside Show Apps (libraryButton.js). The button is the way in and
 // the panel is the whole view.

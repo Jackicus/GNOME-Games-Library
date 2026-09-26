@@ -57,7 +57,7 @@
 #
 set -euo pipefail
 
-UUID="games-menu@jackt"
+UUID="games-menu@jackicus"
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SELF="$REPO_DIR/scripts/nested.sh"
 RUN_DIR="${XDG_RUNTIME_DIR:-/tmp}/games-menu-nested"

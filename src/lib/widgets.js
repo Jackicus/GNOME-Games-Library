@@ -58,7 +58,7 @@ export function createArtwork({path, title, icon, width, height, styleClass = 'g
         style_class: 'gm-art-placeholder-content',
     });
     // `width` is physical pixels but `icon_size` is logical, so the share of
-    // the artwork the icon takes is divided back down (iconGrid.js:143-147).
+    // the artwork the icon takes is divided back down (`iconGrid.js`'s BaseIcon).
     const scale = St.ThemeContext.get_for_stage(global.stage).scale_factor;
     stack.add_child(new St.Icon({
         icon_name: icon,

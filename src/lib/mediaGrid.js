@@ -123,7 +123,7 @@ class GamesMenuPosterGridLayout extends IconGrid.IconGridLayout {
 
         const scale = St.ThemeContext.get_for_stage(global.stage).scale_factor;
         // IconGrid.vfunc_style_changed fills these from the theme, already
-        // scaled (js/ui/iconGrid.js:1258-1263) — never scale them again. They
+        // scaled (`iconGrid.js`'s `vfunc_style_changed`) — never scale them again. They
         // are 0 until the first style change, hence the fallback.
         const hGap = this.columnSpacing || GAP * scale;
         const vGap = this.rowSpacing || GAP * scale;
@@ -132,8 +132,8 @@ class GamesMenuPosterGridLayout extends IconGrid.IconGridLayout {
         const {columnsPerPage: columns, rowsPerPage: rows, pagePadding: pad} = this;
         const blockW = columns * cellW + (columns - 1) * hGap;
         const blockH = rows * cellH + (rows - 1) * vGap;
-        // IconGridLayout._calculateSpacing's pageHalign/pageValign CENTER
-        // (iconGrid.js:591-630) done by hand, because that one takes a single
+        // IconGridLayout's `_calculateSpacing` pageHalign/pageValign CENTER
+        // (iconGrid.js) done by hand, because that one takes a single
         // square childSize and ours is a poster. The block is centred
         // whatever `grid-align` says: the setting is where a part-full row
         // sits under the full ones, not where the block sits on the page.
@@ -153,7 +153,7 @@ class GamesMenuPosterGridLayout extends IconGrid.IconGridLayout {
             page.visibleChildren.forEach((item, index) => {
                 const column = rtl ? columns - 1 - index % columns : index % columns;
                 const row = Math.floor(index / columns);
-                // _getRowPadding with lastRowAlign CENTER (iconGrid.js:649-683),
+                // `_getRowPadding` with lastRowAlign CENTER (iconGrid.js),
                 // which this override skips past: a part-full last row is
                 // centred under the full ones instead of hugging the start,
                 // unless `grid-align` says start. Passing `last_row_align` in
@@ -197,9 +197,9 @@ class GamesMenuMediaGrid extends AppDisplay.AppGrid {
         this.setGridModes([{rows, columns}]);
 
         // The grid makes its own layout and offers no way to choose it. The
-        // one it made goes unreferenced here on purpose: IconGrid's destroy
-        // handler closes over it (iconGrid.js:1178-1193), so it stays alive
-        // and disconnects itself without our help.
+        // one it made goes unreferenced here on purpose: IconGrid's own
+        // destroy handler (iconGrid.js) closes over it, so it stays alive and
+        // disconnects itself without our help.
         const layout = new PosterGridLayout({
             allow_incomplete_pages: true,
             orientation: Clutter.Orientation.HORIZONTAL,
@@ -277,7 +277,7 @@ class GamesMenuMediaView extends BaseAppView {
 
         // BaseAppView re-runs _redisplay — a diff over every tile built so
         // far — whenever an app is pinned to the dash or the parental filter
-        // changes (appDisplay.js:620-628). Neither has anything to say about
+        // changes (appDisplay.js's BaseAppView). Neither has anything to say about
         // media, so both hooks go.
         this._parentalControlsManager.disconnectObject(this);
         this._appFavorites.disconnectObject(this);
@@ -285,7 +285,7 @@ class GamesMenuMediaView extends BaseAppView {
         // The arrow keys walk a grid because St is asked to walk it: the focus
         // manager navigates within the nearest registered group around what is
         // focused. The shell registers the app grid the long way round, as a
-        // Ctrl+Alt+Tab target (overviewControls.js:393-403, which calls
+        // Ctrl+Alt+Tab target (overviewControls.js, which calls
         // focus_manager.add_group for it); a grid of ours is not one of those,
         // so it registers itself. A group further out — the whole panel,
         // say — leaves the arrows with nothing to move between.
