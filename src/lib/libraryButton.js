@@ -188,7 +188,7 @@ export class LibraryButton {
     // which is a wrapper round the panel's own `_updateGroupedElements`.
     //
     // Another extension can wrap the same method on the same panel, for its
-    // own buttons (Video Menu puts its button there the same way). Each
+    // own buttons (Video Library puts its button there the same way). Each
     // wrapper calls whatever was there before it, so any number of them
     // stack; what must not happen is one of them taking the method back by
     // deleting it, which takes every wrapper put on after it too. So ours is

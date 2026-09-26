@@ -207,7 +207,7 @@ Dash to Panel's panel). `libraryButton.js` builds it — a `Dash.ShowAppsIcon`
 subclass for its icon and label — and it is the only way in besides the
 shortcut and a controller's Home, which press it the same way (`app.js`
 `_toggleLibrary`). `app.js` holds it for as long as the extension is enabled
-and hands it to whichever browser a build makes, exactly as Video Menu holds
+and hands it to whichever browser a build makes, exactly as Video Library holds
 its own, so a rebuild — a rescan landing, a setting changed — leaves it where
 it is and lit if it was, rather than taking it out of the dash, putting it
 back after any other extension's button, and zooming a restored panel out of
