@@ -197,6 +197,10 @@ The screenshots are of a made-up library (`scripts/demo_library.py`): the games
 and their artwork are invented, drawn by that script, and taken in a nested
 shell with `./scripts/nested.sh start --clean --demo`.
 
+## Licence
+
+GPL-2.0-or-later. See [LICENSE](LICENSE).
+
 ---
 
 <sub>Steam is a trademark of Valve Corporation, and PlayStation of Sony
