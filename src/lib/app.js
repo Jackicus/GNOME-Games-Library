@@ -35,6 +35,7 @@ import {LibraryWindow} from './libraryWindow.js';
 import {LibraryButton} from './libraryButton.js';
 import {DetailDialog} from './detailDialog.js';
 import {Controls} from './controls.js';
+import {note} from './log.js';
 
 // What Play and the rows of the pane open. An array is a game's command line
 // — Steam's own launch URI, or PCSX2 with the disc — run as it is; the
@@ -95,7 +96,20 @@ export class GamesMenuApp {
     // ------------------------------------------------------------------
     // Lifecycle
     // ------------------------------------------------------------------
+    // The shell never disables an extension whose enable() threw, so a failure
+    // halfway would leave the button, the signals and the key binding behind
+    // until a restart: take down what was built, then fail as the shell
+    // expects.
     enable() {
+        try {
+            this._enable();
+        } catch (e) {
+            this.disable();
+            throw e;
+        }
+    }
+
+    _enable() {
         this._controls.enable();
         this._sections = loadLibrary();
         this._build();
@@ -187,7 +201,7 @@ export class GamesMenuApp {
             this._teardown();
             this._build();
             this._browser?.restore(browsing);
-            console.log('[Games Menu] Rebuilt');
+            note('Rebuilt');
             return GLib.SOURCE_REMOVE;
         });
     }

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<schemalist gettext-domain="gnome-shell-extensions">
+<schemalist>
     <schema path="/org/gnome/shell/extensions/games-menu/" id="org.gnome.shell.extensions.games-menu">
 
         <!-- Games are not a folder of media: both paths only override the
