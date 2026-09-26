@@ -36,7 +36,7 @@ This runs `scripts/dev.sh pack` (`cmd_pack`), which:
    and diffs it against `unzip -Z1` of the built zip, failing loudly and
    naming both what's missing and what shouldn't be there on any mismatch;
 5. deletes the staging directory and reports
-   `dist/games-menu@jackicus.shell-extension.zip`.
+   `dist/games-library@jackicus.shell-extension.zip`.
 
 What each shipped part is:
 
@@ -49,7 +49,7 @@ What each shipped part is:
   Panel wrap. All of it runs inside the compositor process.
 - **`backend/`** — a Python 3 program (`scan_library.py`, `games_scanner.py`,
   `metadata.py`) that reads Steam's and PCSX2's own bookkeeping, fetches
-  artwork and metadata online, and writes `~/.cache/games-menu/library.json`.
+  artwork and metadata online, and writes `~/.cache/games-library/library.json`.
   It is not GJS and is not spawned by `extension.js`: the preferences' Rescan
   button and `dev.sh scan` both invoke it out-of-process with `python3`. See
   [Scripts and binaries](#scripts-and-binaries-does-not-meet-as-it-stands)
@@ -96,7 +96,7 @@ compiled schema.
 ```sh
 make uninstall
 make pack
-gnome-extensions install dist/games-menu@jackicus.shell-extension.zip
+gnome-extensions install dist/games-library@jackicus.shell-extension.zip
 # log out and back in, then enable it
 ```
 
@@ -126,12 +126,12 @@ Current contents:
 
 | Key | Value | Verdict |
 |---|---|---|
-| `uuid` | `games-menu@jackicus` | Valid characters, not under `gnome.org`. Cannot change after the first upload |
-| `name` | `Games Menu` | Generic, no brand in it. No extension on EGO has this name |
+| `uuid` | `games-library@jackicus` | Valid characters, not under `gnome.org`. Cannot change after the first upload |
+| `name` | `Games Library` | Generic, no brand in it. No extension on EGO has this name |
 | `description` | one sentence | Correct as far as it goes; could say more (below) |
-| `settings-schema` | set | Correct; `getSettings()` is called with no arguments in both `lib/app.js` (`GamesMenuApp`'s constructor) and `prefs.js` (`fillPreferencesWindow`), as Best Practices asks |
+| `settings-schema` | set | Correct; `getSettings()` is called with no arguments in both `lib/app.js` (`GamesLibraryApp`'s constructor) and `prefs.js` (`fillPreferencesWindow`), as Best Practices asks |
 | `shell-version` | `["50"]` | The only version actually booted (per [compatibility.md](compatibility.md), 48 and 49 are audited against the shell's sources, not booted, so they're not claimed yet) |
-| `url` | `https://github.com/Jackicus/GNOME-Games-Menu` | Set — the `origin` remote, public, so users can report problems and a reviewer can check the zip against the repository |
+| `url` | `https://github.com/Jackicus/GNOME-Games-Library` | Set — the `origin` remote, public, so users can report problems and a reviewer can check the zip against the repository |
 | `version-name` | `"1.0"` | Valid: letters, numbers, space and period only, ≤ 16 characters |
 | `version` | absent | Correct — EGO assigns and increments this itself; it should never be set here |
 | `session-modes` | absent | Correct — the extension only needs `user` mode and the guideline says the key "MUST be dropped" in that case |
@@ -155,7 +155,7 @@ explains what could look like a bug. Worth saying:
 - Rescan looks games up online unless that is switched off. Steam's store and
   artwork CDN get the ids of installed Steam games. IGDB gets the titles of PS2
   discs, and only when the user has entered their own free Twitch key. Answers
-  are cached in `~/.cache/games-menu`;
+  are cached in `~/.cache/games-library`;
 - API keys are stored in GSettings (dconf) in plain text;
 - Play starts a Steam game through Steam and a PS2 disc through PCSX2, and
   neither is included;
@@ -175,7 +175,7 @@ Multi-paragraph descriptions use `\n` literals, and `*` makes a bullet list
 runs at load time, and all of it is allowed: `GObject.registerClass` calls,
 constant tables, `BaseAppView` read off `AppDisplay`'s prototype, two
 `Cogl.Color` constants in `panel.js` (a boxed value, not a GObject instance),
-`shape.js` building its radius strings, and a few `let` holders. `GamesMenuApp`
+`shape.js` building its radius strings, and a few `let` holders. `GamesLibraryApp`
 calls `getSettings()` and constructs `Controls` in its constructor, and it is
 constructed inside `enable()`. The virtual keyboard is created in
 `Controls.enable()`.
@@ -187,7 +187,7 @@ be cleared or freed in disable()" literally could ask about them.
 
 ### Destroy all objects: meets
 
-`GamesMenuApp.disable()` does the following, in order:
+`GamesLibraryApp.disable()` does the following, in order:
 
 - removes the shortcut keybinding;
 - drops the theme-context and settings connections;
@@ -212,7 +212,7 @@ that it is still hooked before doing anything, and the comments where it is put
 on say why. Expect the question anyway.
 
 Under the dev entry point (`scripts/dev-extension.js`, never shipped), the
-staged copy of `lib/` in `$XDG_RUNTIME_DIR/games-menu/lib-<stamp>/` also
+staged copy of `lib/` in `$XDG_RUNTIME_DIR/games-library/lib-<stamp>/` also
 outlives `disable()`, kept on purpose so the next `enable()` can reuse or sweep
 it ([private-api.md](private-api.md#not-shell-internals-staging-lib)).
 
@@ -231,7 +231,7 @@ the owner's `disable()`. The stage's `captured-event::key` handler in
 or on objects they hold, so they go when those actors are destroyed.
 
 The exception is the `Gio.FileMonitor` on `library.json` in
-`GamesMenuApp.enable()`, which no actor holds. Its `changed` handler is
+`GamesLibraryApp.enable()`, which no actor holds. Its `changed` handler is
 connected with plain `connect()`. `disable()` cancels the monitor and drops it,
 which stops the handler, but never disconnects it. A reviewer reading line by
 line will ask. `connectObject(..., this)` and `disconnectObject(this)` fix it.
@@ -247,7 +247,7 @@ removed again on the way out, as "Keep Timeout Removal Next to Creation" asks:
 
 | Source | Where | Removed |
 |---|---|---|
-| rebuild timer | `GamesMenuApp._scheduleRebuild()` | right before creation; `disable()` |
+| rebuild timer | `GamesLibraryApp._scheduleRebuild()` | right before creation; `disable()` |
 | repeat timers for a held direction | `Controls._hold()` | `_release(id)` right before creation; `_stopPads()` from `disable()` |
 | second-column idle | `DetailView.populate()` (`_deferredMain`) | `_cancelDeferred()` at the top of `populate()`; `_addMain()`; `_cancelDeferred()` from `destroy()` |
 | list timer | `DetailView._fillList()` | guarded before creation; `_cancelDeferred()` from `destroy()` |
@@ -287,7 +287,7 @@ never in what ships:
 
 `scripts/dev-extension.js`, the entry point `make link` installs in place of
 `src/extension.js`, hashes `lib/` on every `enable()`, copies it into
-`$XDG_RUNTIME_DIR/games-menu/lib-<stamp>/`, deletes every other stage there,
+`$XDG_RUNTIME_DIR/games-library/lib-<stamp>/`, deletes every other stage there,
 and imports `app.js` from the copy with `await import('file://...')`. The
 purpose is to defeat GJS's module cache during development. It is not in the
 zip, and `check_pack` (`scripts/dev.sh cmd_pack`) fails the build if it ever
@@ -317,7 +317,7 @@ Split them.
 
 "The log should only be used for important messages and errors." Three lines
 used to be written when nothing was wrong — `Enabled from <stage dir>`,
-`Rebuilt` in `GamesMenuApp._scheduleRebuild()`, and the missing-libmanette
+`Rebuilt` in `GamesLibraryApp._scheduleRebuild()`, and the missing-libmanette
 notice in `Controls._startPads()` — and all three now go through
 `lib/log.js`'s `note()`, which only `scripts/dev-extension.js` turns on. The
 shipped extension calls `setVerbose()` nowhere, so `note()` is a no-op and
@@ -400,7 +400,7 @@ which is the default. It sends:
   `id.twitch.tv` for a token, the cleaned-up title of each PS2 disc not already
   cached to `api.igdb.com`, and requests for cover art to `images.igdb.com`.
 
-Every request carries the User-Agent `GamesMenu/1.0`. None of it is telemetry,
+Every request carries the User-Agent `GamesLibrary/1.0`. None of it is telemetry,
 but it is the user's game list going to third parties, so the description
 should say so.
 
@@ -435,7 +435,7 @@ description should mention controllers.
 `-fullscreen -- <disc>`. The binary can be an AppImage the scanner found in
 `~/Downloads`, among other places. There is no shell, and it runs only on the
 user's press. But `normalizeGame()` checks only that it is an array of
-non-empty strings, so whatever writes `~/.cache/games-menu/library.json`
+non-empty strings, so whatever writes `~/.cache/games-library/library.json`
 decides what Play runs. That is the user's own privilege, not an escalation,
 but a reviewer reading `Util.spawn(path)` fed from a JSON file will ask. Two
 small changes settle it:
@@ -545,8 +545,8 @@ correctly", and it is not.
 
 ### GSettings schemas: meets
 
-The ID `org.gnome.shell.extensions.games-menu` and the path
-`/org/gnome/shell/extensions/games-menu/` use the required bases. The file is
+The ID `org.gnome.shell.extensions.games-library` and the path
+`/org/gnome/shell/extensions/games-library/` use the required bases. The file is
 named `<schema-id>.gschema.xml`, the XML is in the zip, and no compiled schema
 ships. `glib-compile-schemas --strict --dry-run src/schemas` passes.
 
@@ -699,10 +699,10 @@ zip, not from the development link
 ## Uploading
 
 - **Web:** log in at https://extensions.gnome.org/upload/, choose
-  `dist/games-menu@jackicus.shell-extension.zip`, and accept the terms.
+  `dist/games-library@jackicus.shell-extension.zip`, and accept the terms.
 - **Command line** (gnome-extensions 49 and later; gjs.guide,
   [Port Extensions to GNOME Shell 49](https://gjs.guide/extensions/upgrading/gnome-shell-49.html)):
-  `gnome-extensions upload --accept-tos dist/games-menu@jackicus.shell-extension.zip`.
+  `gnome-extensions upload --accept-tos dist/games-library@jackicus.shell-extension.zip`.
   It prompts for the EGO username and password. `--user`, `--password` and
   `--password-file` exist for CI. gjs.guide warns that "Using the password in
   a command option risks exposing it in logs, the environment or the
@@ -716,7 +716,7 @@ Before every upload:
 
 1. Bump `version-name`.
 2. Run `glib-compile-schemas --strict --dry-run src/schemas`.
-3. Run `make pack`, and read `unzip -l dist/games-menu@jackicus.shell-extension.zip`.
+3. Run `make pack`, and read `unzip -l dist/games-library@jackicus.shell-extension.zip`.
 4. Run `make uninstall`, install that zip, log out and back in, press Rescan in
    its preferences, and go through the checklist in
    [compatibility.md](compatibility.md) on each version you claim.

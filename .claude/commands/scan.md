@@ -14,7 +14,7 @@ Re-index the games library.
    is a credential slot in the `credentials` setting — never print it. "no
    credential set, skipping it" in the output is IGDB without a key stepping
    aside, not an error. With `games-online` off it reads the cache and stays off
-   the network. It writes `~/.cache/games-menu/library.json`.
+   the network. It writes `~/.cache/games-library/library.json`.
 2. Report the count and the Steam/PS2 split from the scanner's output.
 3. Nothing else is needed: the running extension watches `library.json` and
    rebuilds itself when the file lands.

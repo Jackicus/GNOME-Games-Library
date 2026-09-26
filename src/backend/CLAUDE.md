@@ -24,8 +24,8 @@ source is chosen by its platform, not by the order of `games-sources`; the
 order only decides which IGDB credential slot is tried first. IGDB's Twitch
 client id and secret are one slot (`igdb@1`) in the `credentials` setting,
 tab-separated, which the scanner reads itself under `--from-settings`; only a
-standalone run falls back to `$GAMES_MENU_IGDB_CLIENT_ID` /
-`$GAMES_MENU_IGDB_CLIENT_SECRET`.
+standalone run falls back to `$GAMES_LIBRARY_IGDB_CLIENT_ID` /
+`$GAMES_LIBRARY_IGDB_CLIENT_SECRET`.
 
 Launching is an argv list in the item — `xdg-open steam://rungameid/<appid>`,
 or the PCSX2 binary with `-fullscreen -- <disc>` — which `lib/app.js`
@@ -45,7 +45,7 @@ imports them; the scanner never imports the other way round.
   retries a few times. A game whose store lookup still fails is cached with
   its artwork and no synopsis — `enrich` saves whatever answered — and the
   cached record is what later scans use, so it stays without one until the
-  record is dropped from `~/.cache/games-menu/metadata/index.json`.
+  record is dropped from `~/.cache/games-library/metadata/index.json`.
 - **Never run `--from-settings` to test.** It reads the real GSettings,
   credentials included. Test with explicit paths, `--offline`, and `HOME`
   pointed at a scratch directory so nothing lands in the real cache (the cache

@@ -1,4 +1,4 @@
-// Reads ~/.cache/games-menu/library.json (written by backend/scan_library.py)
+// Reads ~/.cache/games-library/library.json (written by backend/scan_library.py)
 // and normalises every game into one shape the views can render:
 //
 //   item = {
@@ -39,7 +39,7 @@ export function sectionByKey(key) {
 }
 
 function cacheDir() {
-    return GLib.build_filenamev([GLib.get_user_cache_dir(), 'games-menu']);
+    return GLib.build_filenamev([GLib.get_user_cache_dir(), 'games-library']);
 }
 
 export function libraryPath() {
@@ -64,7 +64,7 @@ export function readSections() {
         const raw = JSON.parse(new TextDecoder('utf-8').decode(bytes));
         return {sections: raw?.sections ?? {}, generated: raw?.generated ?? null};
     } catch (e) {
-        console.error(`[Games Menu] Failed to read ${path}: ${e}`);
+        console.error(`[Games Library] Failed to read ${path}: ${e}`);
         return nothing;
     }
 }

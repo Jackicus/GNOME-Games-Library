@@ -1,4 +1,4 @@
-"""Online metadata and artwork, cached under ~/.cache/games-menu.
+"""Online metadata and artwork, cached under ~/.cache/games-library.
 
 Sources, an ordered list in the preferences:
 
@@ -16,7 +16,7 @@ A source entry is a name, optionally with a credential slot — "igdb" is the
 same as "igdb@1", "igdb@2" is a second IGDB key to fall back to. Credentials
 arrive from the preferences (the `credentials` setting, read by
 scan_library.py) or, for a standalone run, from the environment
-(GAMES_MENU_IGDB_CLIENT_ID, GAMES_MENU_IGDB_CLIENT_SECRET). Neither is ever
+(GAMES_LIBRARY_IGDB_CLIENT_ID, GAMES_LIBRARY_IGDB_CLIENT_SECRET). Neither is ever
 argv, so they do not show up in `ps`.
 
 Everything degrades to "no metadata" on failure: the UI draws a placeholder
@@ -43,7 +43,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-CACHE_DIR = os.path.expanduser("~/.cache/games-menu")
+CACHE_DIR = os.path.expanduser("~/.cache/games-library")
 POSTER_CACHE_DIR = os.path.join(CACHE_DIR, "posters")
 BACKDROP_CACHE_DIR = os.path.join(CACHE_DIR, "backdrops")
 METADATA_CACHE_DIR = os.path.join(CACHE_DIR, "metadata")
@@ -53,7 +53,7 @@ METADATA_INDEX = os.path.join(METADATA_CACHE_DIR, "index.json")
 # interrupted loses at most this many freshly fetched records (never artwork,
 # which is on disk the moment it lands).
 INDEX_FLUSH_EVERY = 25
-USER_AGENT = "GamesMenu/1.0"
+USER_AGENT = "GamesLibrary/1.0"
 
 # The largest the desktop ever draws each kind of artwork, doubled where a
 # HiDPI monitor would ask for twice the pixels, and no further — everything
@@ -398,8 +398,8 @@ class MetadataService:
         # standalone run (no preferences to read) is given a key.
         self._env_credentials = {
             "igdb": FIELD_SEP.join((
-                (os.environ.get("GAMES_MENU_IGDB_CLIENT_ID") or "").strip(),
-                (os.environ.get("GAMES_MENU_IGDB_CLIENT_SECRET") or "").strip(),
+                (os.environ.get("GAMES_LIBRARY_IGDB_CLIENT_ID") or "").strip(),
+                (os.environ.get("GAMES_LIBRARY_IGDB_CLIENT_SECRET") or "").strip(),
             )),
         }
         self._igdb_tokens = {}        # slot -> (value, expiry); one per credential per run

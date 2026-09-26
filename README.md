@@ -1,8 +1,8 @@
 <div align="center">
 
-# Games Menu
+# Games Library
 
-**Your installed games, in a menu of their own beside Show Apps.**
+**Your installed games, in a library of their own beside Show Apps.**
 
 Every Steam game on every drive, and the PS2 discs PCSX2 knows about, in one
 library with proper cover art.<br>
@@ -108,8 +108,8 @@ scanner uses the image libraries GNOME already ships, or
 [Pillow](https://python-pillow.org/) if you have it.
 
 ```bash
-git clone https://github.com/Jackicus/GNOME-Games-Menu.git
-cd GNOME-Games-Menu
+git clone https://github.com/Jackicus/GNOME-Games-Library.git
+cd GNOME-Games-Library
 make install
 ```
 
@@ -117,10 +117,10 @@ GNOME Shell only looks for new extensions when you log in. Log out, log back
 in, then turn it on:
 
 ```bash
-gnome-extensions enable games-menu@jackicus
+gnome-extensions enable games-library@jackicus
 ```
 
-Then open the preferences (`gnome-extensions prefs games-menu@jackicus`) and press
+Then open the preferences (`gnome-extensions prefs games-library@jackicus`) and press
 **Rescan** on the **Games** page. The first scan takes a while, since it looks
 every game up online; after that it only fetches what it hasn't seen. A
 **Games** button appears beside Show Apps — in the overview's dash, or in Dash
@@ -161,11 +161,11 @@ libmanette, which most GNOME desktops already have.
 
 ## Alongside other extensions
 
-Games Menu keeps to its own button, settings and cache, so it sits happily
+Games Library keeps to its own button, settings and cache, so it sits happily
 beside docks, Dash to Panel, Blur my Shell, and other extensions that put a
 button beside Show Apps. If another extension's grid is up in the overview when
 you press **Games**, the overview closes and reopens on your games rather than
-drawing one grid over the other. On a controller, Guide opens Games Menu and
+drawing one grid over the other. On a controller, Guide opens Games Library and
 Menu is left free for anything else.
 
 ## Troubleshooting
@@ -185,7 +185,7 @@ system journal, never to a terminal.
 make link      # install as a link to src/, so edits are live
 make reload    # apply your edits to the running shell, no logout needed
 make nested    # start a throwaway nested GNOME Shell, mirrored in a window
-make pack      # build dist/games-menu@jackicus.shell-extension.zip
+make pack      # build dist/games-library@jackicus.shell-extension.zip
 ```
 
 Edits to `extension.js` or `metadata.json` still need a log out and back in.

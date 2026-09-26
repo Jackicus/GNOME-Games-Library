@@ -106,7 +106,7 @@ const REMOTE_KEYS = {
 // any of the keys, and it keeps the setting one flat a{ss}.
 const FIELD_SEP = '\t';
 
-export default class GamesMenuPreferences extends ExtensionPreferences {
+export default class GamesLibraryPreferences extends ExtensionPreferences {
     fillPreferencesWindow(window) {
         const settings = this.getSettings();
         window.set_default_size(720, 640);
@@ -339,7 +339,7 @@ export default class GamesMenuPreferences extends ExtensionPreferences {
             try {
                 Gio.Subprocess.new(['gnome-control-center', 'background'], Gio.SubprocessFlags.NONE);
             } catch (e) {
-                console.warn(`[Games Menu] Could not open Settings: ${e.message}`);
+                console.warn(`[Games Library] Could not open Settings: ${e.message}`);
             }
         });
         appearance.add(accent);
@@ -985,7 +985,7 @@ export default class GamesMenuPreferences extends ExtensionPreferences {
             const [ok, bytes] = GLib.file_get_contents(path);
             return ok ? new TextDecoder().decode(bytes).trim() : '';
         } catch (e) {
-            console.warn(`[Games Menu] Could not read ${path}: ${e.message}`);
+            console.warn(`[Games Library] Could not read ${path}: ${e.message}`);
             return '';
         }
     }
@@ -1138,10 +1138,10 @@ export default class GamesMenuPreferences extends ExtensionPreferences {
                         const [, , stderr] = p.communicate_utf8_finish(result);
                         failed = !p.get_successful();
                         if (failed)
-                            console.error(`[Games Menu] Scan failed: ${stderr}`);
+                            console.error(`[Games Library] Scan failed: ${stderr}`);
                     } catch (e) {
                         failed = true;
-                        console.error(`[Games Menu] Scan failed: ${e.message}`);
+                        console.error(`[Games Library] Scan failed: ${e.message}`);
                     }
                     button.set_sensitive(true);
                     content.set_icon_name(failed ? 'dialog-warning-symbolic' : 'view-refresh-symbolic');
@@ -1150,7 +1150,7 @@ export default class GamesMenuPreferences extends ExtensionPreferences {
                     onDone();
                 });
             } catch (e) {
-                console.error(`[Games Menu] Could not launch scanner: ${e.message}`);
+                console.error(`[Games Library] Could not launch scanner: ${e.message}`);
                 button.set_sensitive(true);
                 content.set_icon_name('dialog-warning-symbolic');
                 content.set_label('Failed');

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Index the installed games and write the library.json Games Menu reads.
+"""Index the installed games and write the library.json Games Library reads.
 
 Games are not a folder of media: Steam's library files and PCSX2's ini say
 where everything is, and both are auto-detected, so a bare run scans them. The
@@ -45,7 +45,7 @@ SECTIONS = ("games",)
 # thing is not to provoke it).
 ENRICH_WORKERS = 6
 
-SCHEMA = "org.gnome.shell.extensions.games-menu"
+SCHEMA = "org.gnome.shell.extensions.games-library"
 # The schemas ship beside the backend in the extension directory, so they are
 # found from the installed copy as readily as from the repo.
 SCHEMA_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "schemas")
@@ -129,7 +129,7 @@ def apply_settings(args, parser):
     """
     if _setting("library-opens-in") is None:
         parser.error(
-            "--from-settings could not read the Games Menu settings. Compile the "
+            "--from-settings could not read the Games Library settings. Compile the "
             f"schemas ({SCHEMA_DIR}) or pass the paths explicitly.")
 
     # The two roots are auto-detected; a setting only overrides that.
@@ -199,7 +199,7 @@ def main():
         apply_settings(args, parser)
 
     # Keys come from the preferences, or from the environment
-    # (GAMES_MENU_IGDB_CLIENT_ID, GAMES_MENU_IGDB_CLIENT_SECRET) for a
+    # (GAMES_LIBRARY_IGDB_CLIENT_ID, GAMES_LIBRARY_IGDB_CLIENT_SECRET) for a
     # standalone run. Never argv.
     meta = MetadataService(
         online=not args.offline,

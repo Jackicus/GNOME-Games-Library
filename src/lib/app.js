@@ -1,4 +1,4 @@
-// GamesMenuApp: where the games library opens, where a picked game opens, and
+// GamesLibraryApp: where the games library opens, where a picked game opens, and
 // what launching one does.
 //
 // Two settings decide where things open, and they are read independently of
@@ -65,7 +65,7 @@ function openPath(path, beforeLaunch = null) {
         });
 }
 
-export class GamesMenuApp {
+export class GamesLibraryApp {
     constructor(extension) {
         this._settings = extension.getSettings();
         this._sections = {};
@@ -150,7 +150,7 @@ export class GamesMenuApp {
                     this._scheduleRebuild({reload: true, delay: 400});
             });
         } catch (e) {
-            console.warn(`[Games Menu] Could not watch library.json: ${e}`);
+            console.warn(`[Games Library] Could not watch library.json: ${e}`);
         }
     }
 
@@ -331,7 +331,7 @@ export class GamesMenuApp {
             return;
         const workspace = this._emptyWorkspace();
         if (!workspace) {
-            console.warn('[Games Menu] No empty workspace to play on (Settings → Multitasking).');
+            console.warn('[Games Library] No empty workspace to play on (Settings → Multitasking).');
             return;
         }
         workspace.activate(global.get_current_time());

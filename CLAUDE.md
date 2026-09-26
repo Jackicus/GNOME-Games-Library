@@ -1,6 +1,6 @@
-# Games Menu
+# Games Library
 
-A GNOME Shell extension (UUID `games-menu@jackicus`) that puts your installed games
+A GNOME Shell extension (UUID `games-library@jackicus`) that puts your installed games
 — Steam, including libraries on other drives, and PlayStation 2 discs through
 PCSX2 — in a library beside Show Apps: in the overview's app-grid slot, or in
 a panel that pops out of its button. No window, no titlebar, nothing on the
@@ -46,7 +46,7 @@ under `src/` are live without a reinstall, but the entry point differs from
 what ships.
 
 - `extension.js` — imports `app.js` and enables it (below).
-- `lib/app.js` — `GamesMenuApp`: settings, rebuilds, the browser, the detail
+- `lib/app.js` — `GamesLibraryApp`: settings, rebuilds, the browser, the detail
   pop-up, controls, the shortcut, and launching.
 - `lib/library.js` — `SECTIONS` (the one, `games`), reading `library.json`,
   the game normaliser.
@@ -72,7 +72,7 @@ file of the extension's own in `icons/`, not a theme name — a gamepad, read
 from the extension's directory and `-symbolic`, so St recolours it as it does
 Show Apps. The section's `icon` stays a theme name, for its preferences page.
 
-Runtime data: `~/.cache/games-menu/` — `library.json`, `posters/`, `backdrops/`,
+Runtime data: `~/.cache/games-library/` — `library.json`, `posters/`, `backdrops/`,
 `metadata/` (one `index.json` of every cached record). The JS never scrapes; it
 only reads `library.json` that Python wrote.
 
@@ -91,7 +91,7 @@ The JS treats an art path outside the cache as missing.
 
 1. `scan_library.py` reads Steam's and PCSX2's own bookkeeping
    (`games_scanner.py`), enriches each game online (`metadata.py`) and writes
-   `~/.cache/games-menu/library.json` atomically, under an `flock` so two scans
+   `~/.cache/games-library/library.json` atomically, under an `flock` so two scans
    cannot write over each other. It reads the preferences itself with
    `--from-settings`, so which setting becomes which flag is decided in one
    place and both the Rescan button and `dev.sh scan` just run it.
@@ -112,15 +112,15 @@ The JS treats an art path outside the cache as missing.
    list rather than being an error. The scanner reads `credentials` out of
    GSettings itself under `--from-settings`, so neither the Rescan button nor
    `dev.sh scan` hands it a key; only a standalone run falls back to
-   `$GAMES_MENU_IGDB_CLIENT_ID` / `$GAMES_MENU_IGDB_CLIENT_SECRET`.
-2. `extension.js` is a plain entry point: `enable()` builds a `GamesMenuApp`
+   `$GAMES_LIBRARY_IGDB_CLIENT_ID` / `$GAMES_LIBRARY_IGDB_CLIENT_SECRET`.
+2. `extension.js` is a plain entry point: `enable()` builds a `GamesLibraryApp`
    from a static `import` of `lib/app.js` and calls its `enable()`; `disable()`
    is the reverse. That is what ships and what `make install`/`make pack` put
    on disk. `make link` installs `scripts/dev-extension.js` as `extension.js`
    instead, for development only — it never ships. GJS caches modules by URL
    for the life of the shell, so re-importing `lib/` after an edit would hand
    back the old code; `dev-extension.js` works around that by copying `lib/`
-   into `$XDG_RUNTIME_DIR/games-menu/lib-<stamp>/` on every `enable()` and
+   into `$XDG_RUNTIME_DIR/games-library/lib-<stamp>/` on every `enable()` and
    importing from there, where `<stamp>` is a checksum of `lib/`'s file
    contents (name, size, mtime), not a timestamp of the build — a directory
    that changes name when the content changes is what lets a disable/enable
@@ -134,7 +134,7 @@ The JS treats an art path outside the cache as missing.
    of this: its static `import` of `lib/app.js` from `src/` is evaluated once,
    the same way `extension.js` itself is, and there is no separate stage to
    reuse or go stale.
-3. `GamesMenuApp` reads `library.json` and builds two things: a **browser** —
+3. `GamesLibraryApp` reads `library.json` and builds two things: a **browser** —
    `MediaMenu` or `LibraryWindow`, per `library-opens-in` — and the
    **`DetailDialog`** a pick pops up in. A file monitor on `library.json`
    rebuilds both when a rescan lands; so does a change of any style setting,
@@ -337,12 +337,12 @@ same shell and Dash to Panel methods, and read the same controllers.
 Everything below is what keeps them from breaking each other; keep it true.
 
 - **GObject type names are global to the process.** Every
-  `GObject.registerClass` class here is `GamesMenu…` (`GamesMenuMediaView`,
-  `GamesMenuPanel`, `GamesMenuLibraryIcon`, …). A duplicate name makes
+  `GObject.registerClass` class here is `GamesLibrary…` (`GamesLibraryMediaView`,
+  `GamesLibraryPanel`, `GamesLibraryLibraryIcon`, …). A duplicate name makes
   `enable()` throw. A new class gets the prefix.
 - **Stylesheets are global.** Every class of ours is `gm-`. Shell classes
   (`app-folder-dialog`, `overview-tile`, `button`) are shared on purpose. The
-  blur effect on a panel is named `games-menu-panel-blur`.
+  blur effect on a panel is named `games-library-panel-blur`.
 - **Shell and Dash to Panel monkey-patches must chain.** `mediaMenu.js` wraps
   the overview layout's `_getAppDisplayBoxForState` and `libraryButton.js`
   wraps Dash to Panel's `panel._updateGroupedElements`, both as own properties
@@ -379,15 +379,15 @@ Everything below is what keeps them from breaking each other; keep it true.
   workspace with `_keepAliveId` set — the shell's own during a drag, or an
   extension's on a workspace it has claimed for itself. It only ever reads
   `_keepAliveId`, never sets it.
-- **Distinct paths.** Settings `org.gnome.shell.extensions.games-menu`, cache
-  `~/.cache/games-menu/`, staging `$XDG_RUNTIME_DIR/games-menu/`, log prefix
-  `[Games Menu]` (`make logs` greps for it), nested shell `games-menu-dev` in
-  `$XDG_RUNTIME_DIR/games-menu-nested/`.
+- **Distinct paths.** Settings `org.gnome.shell.extensions.games-library`, cache
+  `~/.cache/games-library/`, staging `$XDG_RUNTIME_DIR/games-library/`, log prefix
+  `[Games Library]` (`make logs` greps for it), nested shell `games-library-dev` in
+  `$XDG_RUNTIME_DIR/games-library-nested/`.
 
 ## Design rules
 
 - **A modification of GNOME, not a second one.** Whatever the shell already has
-  is what Games Menu uses: the app grid for the library, `AppViewItem` and
+  is what Games Library uses: the app grid for the library, `AppViewItem` and
   `overview-tile` for a tile, `app-folder-dialog` for the panels, `button` for
   the actions, `global.focus_manager` for the keyboard, the dash's own
   `ShowAppsIcon` for the button. Before writing a widget, look for the
@@ -448,7 +448,7 @@ Everything below is what keeps them from breaking each other; keep it true.
   under `make link`) or `metadata.json` needs a log out / log back in (or, for
   the nested shell, `stop` + `start`).
 - **New UUIDs need a logout** for the same reason: the shell only scans for
-  unknown extension UUIDs at startup. `games-menu@jackicus` is one.
+  unknown extension UUIDs at startup. `games-library@jackicus` is one.
 - **`make reload` is not optional.** Edits under `src/` are live on disk via
   `make link`'s links, but the shell holds the old module until the
   disable/enable cycle.

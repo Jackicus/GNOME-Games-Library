@@ -88,7 +88,7 @@ export class MediaMenu {
         this._appsBox = this._appDisplay?._box ?? null;
         if (!this._appDisplay || !this._appsBox || !this._sections.length) {
             if (this._sections.length)
-                console.warn('[Games Menu] The overview is not laid out as expected; no games menu.');
+                console.warn('[Games Library] The overview is not laid out as expected; no games menu.');
             this._appsBox = null;
             return;
         }

@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 #
-# Drive a throwaway nested GNOME Shell for testing Games Menu.
+# Drive a throwaway nested GNOME Shell for testing Games Library.
 #
 #   ./scripts/nested.sh start [WxH]   start a nested shell (default 1600x900) with
-#                                     Games Menu ACTIVE, and open a live mirror window
+#                                     Games Library ACTIVE, and open a live mirror window
 #                                     of it on the real desktop
 #   ./scripts/nested.sh start --headless [WxH]
 #                                     no mirror window; screenshots are the only view
 #   ./scripts/nested.sh start --clean [--demo] [WxH]
-#                                     a settings database of its own: only Games Menu
+#                                     a settings database of its own: only Games Library
 #                                     enabled, the real session's look copied in,
 #                                     nothing written to ~/.config/dconf/user. With
 #                                     --demo, the made-up library of demo_library.py
@@ -27,7 +27,7 @@
 #   ./scripts/nested.sh move X Y      move the pointer there (hover) without clicking
 #   ./scripts/nested.sh key KEYSYM    press a key or chord (Escape, Super+Page_Down, ...)
 #   ./scripts/nested.sh overview on|off   show/hide the Activities overview
-#   ./scripts/nested.sh reload        disable/enable Games Menu inside the nested shell
+#   ./scripts/nested.sh reload        disable/enable Games Library inside the nested shell
 #   ./scripts/nested.sh mirror on|off open/close the live mirror window
 #   ./scripts/nested.sh run CMD...    run CMD against the nested shell's session bus
 #   ./scripts/nested.sh logs [N] [--all]
@@ -46,7 +46,7 @@
 #
 # Nothing is left behind on the desktop: the mirror closes when the shell stops or
 # dies, and a shell started from a Claude Code session stops itself after
-# GAMES_MENU_NESTED_IDLE seconds (default 600, 0 = never) without a command here,
+# GAMES_LIBRARY_NESTED_IDLE seconds (default 600, 0 = never) without a command here,
 # and when that session ends (the SessionEnd hook runs 'session-end').
 #
 # Other extensions' repos may have nested shells of their own, driven by
@@ -57,10 +57,10 @@
 #
 set -euo pipefail
 
-UUID="games-menu@jackicus"
+UUID="games-library@jackicus"
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SELF="$REPO_DIR/scripts/nested.sh"
-RUN_DIR="${XDG_RUNTIME_DIR:-/tmp}/games-menu-nested"
+RUN_DIR="${XDG_RUNTIME_DIR:-/tmp}/games-library-nested"
 BUS_FILE="$RUN_DIR/bus"
 PID_FILE="$RUN_DIR/pid"
 LOG_FILE="$RUN_DIR/log"
@@ -77,7 +77,7 @@ PROFILE_FILE="$RUN_DIR/dconf-profile"
 # session's own dconf-service and deleted by 'stop'. dconf names a database by
 # a D-Bus object path element (/ca/desrt/dconf/Writer/<name>), so letters,
 # digits and underscores only: a hyphen fails every write.
-CLEAN_DB="games_menu_nested"
+CLEAN_DB="games_library_nested"
 # --demo's cache home: the made-up library, and nothing else of the user's.
 DEMO_CACHE="$RUN_DIR/demo-cache"
 # GNOME Shell creates this for its first 60 s; if the shell crashes while it
@@ -87,13 +87,13 @@ DEMO_CACHE="$RUN_DIR/demo-cache"
 # repo's nested shell shares it too: whichever found it absent owns it, and
 # only the owner's stop removes it.
 CRASH_GUARD="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/gnome-shell-disable-extensions"
-IDLE_SECS="${GAMES_MENU_NESTED_IDLE:-600}"
+IDLE_SECS="${GAMES_LIBRARY_NESTED_IDLE:-600}"
 # The real session's display and bus, captured before nested_env overrides them:
 # the mirror window has to open on the desktop the user is looking at.
 HOST_WAYLAND_DISPLAY="${WAYLAND_DISPLAY:-wayland-0}"
 HOST_BUS="${DBUS_SESSION_BUS_ADDRESS:-unix:path=${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/bus}"
 DRIVER="$REPO_DIR/scripts/nested_driver.py"
-WL_DISPLAY="games-menu-dev"
+WL_DISPLAY="games-library-dev"
 
 info() { printf '\033[1;34m→\033[0m %s\n' "$*"; }
 ok()   { printf '\033[1;32m✓\033[0m %s\n' "$*"; }
@@ -131,7 +131,7 @@ nested_env() {
 }
 
 # --clean: a dconf profile of the nested session's own. Its writable database
-# starts empty every time, over a read-only one seeded here with Games Menu
+# starts empty every time, over a read-only one seeded here with Games Library
 # alone in enabled-extensions and the real session's look, so the nested
 # shell shows nothing of the other extensions and matches the desktop it is
 # screenshotted for. The real ~/.config/dconf/user is never opened for
@@ -291,8 +291,8 @@ cmd_start() {
     # enabled is not listed: it would sit at INITIALIZED doing nothing.
     if nested_env gsettings get org.gnome.shell enabled-extensions 2>/dev/null | grep -qF "'$UUID'"; then
         wait_state ACTIVE \
-            || die "Games Menu is $(nested_state) after startup -- check './scripts/nested.sh logs' for a JS error."
-        ok "Games Menu ACTIVE."
+            || die "Games Library is $(nested_state) after startup -- check './scripts/nested.sh logs' for a JS error."
+        ok "Games Library ACTIVE."
     else
         enable_in_nested
     fi
@@ -307,7 +307,7 @@ enable_in_nested() {
     nested_env gnome-extensions enable "$UUID" 2>/dev/null || die "Could not enable $UUID in the nested shell."
     wait_state ACTIVE \
         || die "Enabled but $(nested_state) -- check './scripts/nested.sh logs' for a JS error."
-    ok "Games Menu ACTIVE."
+    ok "Games Library ACTIVE."
 }
 
 # Stops the nested shell after IDLE_SECS without a command, and cleans up (the
@@ -481,7 +481,7 @@ cmd_run() {
 
 # The shell's log is mostly the bus daemon announcing service activations and the
 # portal complaining about services a throwaway session does not have. None of it
-# is about Games Menu, and it buries the lines that are.
+# is about Games Library, and it buries the lines that are.
 filtered_log() {
     grep -Ev "^\s*$|Activating (via systemd: )?service name=|Successfully activated service|Activated service 'org.freedesktop.systemd1' failed|RealtimeKit|AT-SPI|atk-bridge|discover_other_daemon|gnome-shell-calendar-server|libecal|Error loading calendars|No entry for geolocation" \
         "$LOG_FILE" | tail -n "$1"

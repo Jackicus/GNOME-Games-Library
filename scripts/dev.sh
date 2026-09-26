@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Games Menu development helper.
+# Games Library development helper.
 #
 #   ./scripts/dev.sh link       link src/ into the extensions dir (dev mode)
 #   ./scripts/dev.sh install    copy src/ into the extensions dir (real install)
@@ -18,8 +18,8 @@
 #
 set -euo pipefail
 
-UUID="games-menu@jackicus"
-CACHE_DIR="$HOME/.cache/games-menu"
+UUID="games-library@jackicus"
+CACHE_DIR="$HOME/.cache/games-library"
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SRC_DIR="$REPO_DIR/src"
@@ -157,12 +157,12 @@ cmd_reload() {
 cmd_logs() {
     require journalctl
     if [[ -n "${1:-}" ]]; then
-        info "Games Menu log output since '$1':"
+        info "Games Library log output since '$1':"
         journalctl -o cat /usr/bin/gnome-shell --since "$1" 2>/dev/null \
-            | grep -iE 'games.menu' || info "(nothing logged in that window)"
+            | grep -iE 'games.library' || info "(nothing logged in that window)"
     else
         info "Following GNOME Shell logs (Ctrl+C to stop)..."
-        journalctl -f -o cat /usr/bin/gnome-shell | grep --line-buffered -iE 'games.menu'
+        journalctl -f -o cat /usr/bin/gnome-shell | grep --line-buffered -iE 'games.library'
     fi
 }
 

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <schemalist>
-    <schema path="/org/gnome/shell/extensions/games-menu/" id="org.gnome.shell.extensions.games-menu">
+    <schema path="/org/gnome/shell/extensions/games-library/" id="org.gnome.shell.extensions.games-library">
 
         <!-- Games are not a folder of media: both paths only override the
              auto-detection of Steam's library root and PCSX2's config folder. -->

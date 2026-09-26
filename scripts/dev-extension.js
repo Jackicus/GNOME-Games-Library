@@ -18,7 +18,7 @@ import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
 
-export default class GamesMenuExtension extends Extension {
+export default class GamesLibraryExtension extends Extension {
     async enable() {
         // disable() can arrive while the import is still pending, and would
         // find no app to take down; the one built afterwards would then never
@@ -32,11 +32,11 @@ export default class GamesMenuExtension extends Extension {
             if (this._enabling !== enabling)
                 return;
             log.setVerbose(true);
-            this._app = new module.GamesMenuApp(this);
+            this._app = new module.GamesLibraryApp(this);
             this._app.enable();
-            console.log(`[Games Menu] Enabled from ${runDir}`);
+            console.log(`[Games Library] Enabled from ${runDir}`);
         } catch (e) {
-            console.error('[Games Menu] Failed to load lib/app.js:', e);
+            console.error('[Games Library] Failed to load lib/app.js:', e);
         }
     }
 
@@ -46,7 +46,7 @@ export default class GamesMenuExtension extends Extension {
             try {
                 this._app.disable();
             } catch (e) {
-                console.error('[Games Menu] Error during disable:', e);
+                console.error('[Games Library] Error during disable:', e);
             }
             this._app = null;
         }
@@ -55,7 +55,7 @@ export default class GamesMenuExtension extends Extension {
     }
 
     _stageLib() {
-        const base = GLib.build_filenamev([GLib.get_user_runtime_dir(), 'games-menu']);
+        const base = GLib.build_filenamev([GLib.get_user_runtime_dir(), 'games-library']);
 
         const src = this.dir.get_child('lib');
         const attrs = 'standard::name,standard::type,standard::size,time::modified,time::modified-usec';
@@ -131,7 +131,7 @@ export default class GamesMenuExtension extends Extension {
             it.close(null);
             file.delete(null);
         } catch (e) {
-            console.warn(`[Games Menu] Could not clean ${file.get_path()}: ${e.message}`);
+            console.warn(`[Games Library] Could not clean ${file.get_path()}: ${e.message}`);
         }
     }
 }

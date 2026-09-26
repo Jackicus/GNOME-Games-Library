@@ -1,5 +1,5 @@
 ---
-description: Show recent Games Menu output from the GNOME Shell journal
+description: Show recent Games Library output from the GNOME Shell journal
 argument-hint: "[systemd time spec, e.g. '5 min ago' — defaults to 10 min]"
 allowed-tools: Bash(./scripts/dev.sh logs:*)
 ---
@@ -15,4 +15,4 @@ Summarise what happened rather than dumping every line: how many enable/disable
 cycles, whether the library was rebuilt, and any errors or stack traces in full.
 Exceptions inside a GNOME extension only ever surface here, never in a terminal,
 so this is the place to look when something silently does nothing. Other
-extensions log to the same journal; only `[Games Menu]` lines are this one's.
+extensions log to the same journal; only `[Games Library]` lines are this one's.

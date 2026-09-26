@@ -10,5 +10,5 @@ export function setVerbose(on) {
 
 export function note(message) {
     if (verbose)
-        console.log(`[Games Menu] ${message}`);
+        console.log(`[Games Library] ${message}`);
 }

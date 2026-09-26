@@ -1,16 +1,16 @@
 ---
-description: Show Games Menu running in a nested shell, mirrored live on the desktop, and describe what it looks like
+description: Show Games Library running in a nested shell, mirrored live on the desktop, and describe what it looks like
 argument-hint: "[optional: what to click through first, e.g. 'open the library' or 'pick a game']"
 allowed-tools: Bash(./scripts/nested.sh:*), Bash(make nested:*), Read
 ---
 
-Show what Games Menu currently looks like, using the `drive-extension` skill. The
+Show what Games Library currently looks like, using the `drive-extension` skill. The
 user is watching the mirror window, so narrate with `say` before each step.
 
 Requested: $ARGUMENTS
 
 1. `./scripts/nested.sh start` (reuses one if already running; opens the mirror
-   window on the desktop; Games Menu is ACTIVE when it returns).
+   window on the desktop; Games Library is ACTIVE when it returns).
 2. In **one** `./scripts/nested.sh do …` call: `say` and `click` through to anything
    requested above — the library opens from its button beside Show Apps, so wrap
    an overview walkthrough in `overview on` … `overview off` — then `shot` into

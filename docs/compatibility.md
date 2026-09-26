@@ -23,14 +23,14 @@ version and says what to check first on each. Below, "claimed version"/
 
 How far that goes:
 
-- **Games Menu has not been enabled in the real session on that machine.** The
-  journal has no `Games Menu` line in any boot it still holds, and there is no
-  `~/.cache/games-menu/`, so no scan has written a real library there either.
+- **Games Library has not been enabled in the real session on that machine.** The
+  journal has no `Games Library` line in any boot it still holds, and there is no
+  `~/.cache/games-library/`, so no scan has written a real library there either.
 - **It has been run in the nested shell** (`scripts/nested.sh`): the same
   gnome-shell 50.5 binary, run as
   `gnome-shell --wayland --headless --virtual-monitor 1600x900` on its own
   session bus, from the development link (`make link`). On 2026-09-25 it was
-  run as `start --clean --demo` — Games Menu the only extension enabled, a
+  run as `start --clean --demo` — Games Library the only extension enabled, a
   dconf database of its own, and the made-up library of
   `scripts/demo_library.py` — and these were exercised:
   - the `menu` library, opened from its button in the overview's dash, paged
@@ -129,7 +129,7 @@ already uses `global.stage.context.get_backend().get_default_seat()` in
 `keyboard.js` at `48.0`, `49.0`, `50.5` and `51.0`, so that form would work on
 every version.
 
-`Controls.enable()` is the first thing `GamesMenuApp.enable()` calls. On 51 it
+`Controls.enable()` is the first thing `GamesLibraryApp.enable()` calls. On 51 it
 throws, and nothing else is built (see [GNOME 51](#gnome-51)).
 
 *Check first on every version:* add a key under Select on the Controls page,
@@ -304,7 +304,7 @@ The Rescan button runs `python3 <extension>/backend/scan_library.py
   shape is a version gap on any claimed version; it would only matter if GNOME
   51's stricter rule (an async `disable()` throws) were relevant, which it is
   not here, since neither entry point's `disable()` is async.
-- **A throw inside `GamesMenuApp.enable()` reaches the shell.** It calls
+- **A throw inside `GamesLibraryApp.enable()` reaches the shell.** It calls
   `disable()` on whatever it managed to build and rethrows, so `extension.js`'s
   own `enable()` throws too. `_callExtensionEnable()` then leaves the extension
   disabled with the error shown in the Extensions app and in the journal,
@@ -330,7 +330,7 @@ The Rescan button runs `python3 <extension>/backend/scan_library.py
 As written, 51 gets an extension that says it is on and shows nothing.
 
 1. `Clutter.get_default_backend()` is gone. `Controls.enable()` throws on the
-   first line of `GamesMenuApp.enable()`, so there is no button, no shortcut
+   first line of `GamesLibraryApp.enable()`, so there is no button, no shortcut
    and no controller. The journal says
    `Failed to load lib/app.js: TypeError: ...`. The replacement,
    `global.stage.context.get_backend()`, already works on 48 to 50.
@@ -378,7 +378,7 @@ Dash to Panel 74 claims 51. Blur my Shell 72 does not.
    `_viewBox`.
 4. Install the zip rather than the development link: `make uninstall`, then
    `make pack`, then
-   `gnome-extensions install dist/games-menu@jackicus.shell-extension.zip`, then
+   `gnome-extensions install dist/games-library@jackicus.shell-extension.zip`, then
    log out and in, and enable it. This tests what users get through the shipped
    `extension.js`, including the schema compiled on install and the `backend/`
    inside the installed copy. The dev link's entry point
@@ -418,7 +418,7 @@ Dash to Panel 74 claims 51. Blur my Shell 72 does not.
     panel closes first. The pop-up stays up across a workspace switch, and
     Super does nothing until it is closed.
 11. **Dash to Panel on and off,** through steps 7 to 10 each way. Then disable
-    and enable Dash to Panel with Games Menu on, and check the button comes
+    and enable Dash to Panel with Games Library on, and check the button comes
     back. **Blur my Shell on and off** for step 9.
 12. **The keyboard** in each place: Tab and the arrows move, Enter opens,
     Escape backs out, and Page Up and Page Down turn the grid.

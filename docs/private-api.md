@@ -1,6 +1,6 @@
 # Private and deep GNOME Shell API
 
-Games Menu puts a grid of its own in the overview's app-grid slot, a button
+Games Library puts a grid of its own in the overview's app-grid slot, a button
 beside Show Apps (in the dash, or in Dash to Panel's panel), and pop-up panels
 that open the way an app folder does. None of that has a public API. This is
 everything it reaches into, for reviewers on extensions.gnome.org and for
@@ -43,7 +43,7 @@ because `src/` is changing; functions are named instead.
 the only sign. The last two are public API, listed because 51 removed them
 ([compatibility.md](compatibility.md#gnome-51)).
 
-A throw that reaches `GamesMenuApp.enable()` reaches the shell: it calls
+A throw that reaches `GamesLibraryApp.enable()` reaches the shell: it calls
 `disable()` on whatever it managed to build and rethrows, and `extension.js`
 carries no try/catch of its own, so `_callExtensionEnable()` leaves the
 extension disabled with the error shown in the Extensions app and in the
@@ -70,7 +70,7 @@ this._appDisplay = this._controls?.appDisplay ?? null;
 this._appsBox = this._appDisplay?._box ?? null;
 if (!this._appDisplay || !this._appsBox || !this._sections.length) {
     if (this._sections.length)
-        console.warn('[Games Menu] The overview is not laid out as expected; no games menu.');
+        console.warn('[Games Library] The overview is not laid out as expected; no games menu.');
     this._appsBox = null;
     return;
 }
@@ -312,7 +312,7 @@ renamed, the import succeeds, and the failure comes at the first press.
 const BaseAppView = Object.getPrototypeOf(AppDisplay.AppDisplay);
 ...
 const MediaView = GObject.registerClass(
-class GamesMenuMediaView extends BaseAppView {
+class GamesLibraryMediaView extends BaseAppView {
 ```
 
 **What for.** `BaseAppView` is the class both the app grid and an app folder's
@@ -419,7 +419,7 @@ returns fire, nothing is allocated, and the pages come up empty.
 ### `AppViewItem` and `BaseIcon`
 
 ```js
-class GamesMenuMediaItem extends AppDisplay.AppViewItem {
+class GamesLibraryMediaItem extends AppDisplay.AppViewItem {
     _init({item, section, order, onActivate}) {
         super._init({style_class: 'overview-tile'}, false, true);
         this._id = `${section.key}/${item.id}`;
@@ -464,7 +464,7 @@ the grid is unverified.
 ### Subclassing `Dash.ShowAppsIcon`
 
 ```js
-class GamesMenuLibraryIcon extends Dash.ShowAppsIcon {
+class GamesLibraryLibraryIcon extends Dash.ShowAppsIcon {
     _init(gicon) {
         this._gicon = gicon;
         super._init();
@@ -496,7 +496,7 @@ same at every tag checked, apart from `let` becoming `const` and one
 **Why nothing public.** No API adds a button to the dash.
 
 **If it changes.** A throw while building the button is caught in `_attach()`
-and logged as `[Games Menu] No button beside Show Apps: ...`, and there is no
+and logged as `[Games Library] No button beside Show Apps: ...`, and there is no
 button. If `_createIcon()` stops being called, the button shows the Show Apps
 icon. If `_canRemoveApp()` is renamed, an app dropped on the games button could
 be unpinned from the dash. Neither of those is logged.
@@ -547,7 +547,7 @@ try {
     else if (Main.overview.dash?._dashContainer)
         this._attachToDash(Main.overview.dash);
 } catch (e) {
-    console.warn(`[Games Menu] No button beside Show Apps: ${e}`);
+    console.warn(`[Games Library] No button beside Show Apps: ${e}`);
     this._detach();
 }
 ```
@@ -674,7 +674,7 @@ folder icon, adds a `Shell.BlurEffect` named `appfolder-blur` to each
 (Blur my Shell 72, `components/appfolders.js`). A pop-up that went on shading
 beside those would not look like the folders it copies. So on each open, the
 first folder dialog that carries either is read. Its blur's radius and
-brightness are matched by a blur of our own, `games-menu-panel-blur`, in place
+brightness are matched by a blur of our own, `games-library-panel-blur`, in place
 of the shade, and its extra classes go on our panel, so Blur my Shell's
 stylesheet paints both. `_folderIcons` is the app display's list of
 `FolderIcon`s, `_dialog` the `AppFolderDialog` each one makes, and `_viewBox`
@@ -796,17 +796,17 @@ async enable() {
         if (this._enabling !== enabling)
             return;
         log.setVerbose(true);
-        this._app = new module.GamesMenuApp(this);
+        this._app = new module.GamesLibraryApp(this);
         this._app.enable();
-        console.log(`[Games Menu] Enabled from ${runDir}`);
+        console.log(`[Games Library] Enabled from ${runDir}`);
     } catch (e) {
-        console.error('[Games Menu] Failed to load lib/app.js:', e);
+        console.error('[Games Library] Failed to load lib/app.js:', e);
     }
 }
 ```
 
 `_stageLib()` copies `lib/*.js` into
-`$XDG_RUNTIME_DIR/games-menu/lib-<stamp>/`, building beside its final name and
+`$XDG_RUNTIME_DIR/games-library/lib-<stamp>/`, building beside its final name and
 renaming it into place so a shell that goes down mid-copy leaves nothing a
 later `enable()` mistakes for a finished stage. The stamp is a SHA-256 of each
 file's name, size and modification time. It then deletes every other stage in
@@ -826,8 +826,8 @@ consequences, in development only:
   names. An unlock reuses the stage and registers nothing. Each edit leaves the
   previous stage's types registered for the life of the shell: one set per
   edit.
-- **Errors.** The `catch` here also catches a throw from `GamesMenuApp.enable()`,
+- **Errors.** The `catch` here also catches a throw from `GamesLibraryApp.enable()`,
   and logs it as a load failure rather than letting it reach the shell. That is
   a dev-only difference from the shipped `extension.js`, which has no
-  try/catch and lets a throw from `GamesMenuApp.enable()` disable the extension
+  try/catch and lets a throw from `GamesLibraryApp.enable()` disable the extension
   with the error shown in the Extensions app.

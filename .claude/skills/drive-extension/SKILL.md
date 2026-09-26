@@ -1,11 +1,11 @@
 ---
 name: drive-extension
-description: Run Games Menu in a throwaway nested GNOME Shell, mirrored live on the user's desktop — click through it, screenshot it, then shut it down. Use whenever a change must be SEEN (layout, spacing, colour, animation end-states, the library button, the overview grid, the modal panel, the detail pop-up), or needs a fresh shell start (extension.js, metadata.json, a new UUID).
+description: Run Games Library in a throwaway nested GNOME Shell, mirrored live on the user's desktop — click through it, screenshot it, then shut it down. Use whenever a change must be SEEN (layout, spacing, colour, animation end-states, the library button, the overview grid, the modal panel, the detail pop-up), or needs a fresh shell start (extension.js, metadata.json, a new UUID).
 ---
 
-# Driving Games Menu in a nested shell
+# Driving Games Library in a nested shell
 
-Games Menu draws into the overview and into shell-chrome panels, not into a
+Games Library draws into the overview and into shell-chrome panels, not into a
 window, so the only way to verify a visual change is to look at it. The nested
 shell is a complete second GNOME Shell with its own session bus and virtual
 monitor, reading the same installed extension; if the code throws during
@@ -19,7 +19,7 @@ user through that window. Drive it so both can follow.
 
 ```bash
 S=/tmp/claude-1000/...scratchpad        # your scratchpad; keep shots out of the repo
-./scripts/nested.sh start               # ~2 s; Games Menu is ACTIVE when it returns
+./scripts/nested.sh start               # ~2 s; Games Library is ACTIVE when it returns
 ./scripts/nested.sh do "say Baseline" "overview on" "shot $S/before.png" "overview off"
 # ... edit src/ ...
 ./scripts/nested.sh reload
@@ -66,7 +66,7 @@ iterating and `reload` into it; `start` reuses a running one.
 Backstops, so a forgotten `stop` never strands a window on the user's desktop:
 - the mirror window closes by itself when the nested shell stops or crashes;
 - a shell started from a Claude Code session stops itself after 10 minutes with no
-  `nested.sh` command (`GAMES_MENU_NESTED_IDLE=<seconds>` at `start`, `0` = never);
+  `nested.sh` command (`GAMES_LIBRARY_NESTED_IDLE=<seconds>` at `start`, `0` = never);
 - the project's SessionEnd hook stops it when that session ends.
 
 Do not rely on them — they are for accidents. If the idle stop hit mid-task,
@@ -79,7 +79,7 @@ way a login does. Edits to `extension.js` or `metadata.json` *need* one.
 
 ## Screenshots for the README: `start --clean --demo`
 
-`start --clean` gives the nested shell a dconf database of its own — Games Menu
+`start --clean` gives the nested shell a dconf database of its own — Games Library
 alone in `enabled-extensions`, the real session's accent, fonts and colour
 scheme copied in, nothing written to `~/.config/dconf/user` — so no other
 extension's button, panel or log line is in the picture, and a setting changed
@@ -96,7 +96,7 @@ database; a shell already running is reused as it is, so `stop` first.
 
 Other extensions' repos have their own copies of this tooling and their own
 nested shells, and they can run at the same time as this one: this one is
-Wayland display `games-menu-dev`, run dir `$XDG_RUNTIME_DIR/games-menu-nested`,
+Wayland display `games-library-dev`, run dir `$XDG_RUNTIME_DIR/games-library-nested`,
 and every stray it looks for is matched by this repo's paths. **Never** stop,
 kill or `pkill` any nested shell, mirror or run dir but this one's from here —
 another session may be using it. They all share dconf (below), so two at once
@@ -129,7 +129,7 @@ loaded, the accent or geometry changed. Roughly:
   does. Play and Show in Files are under the artwork; the details list (install
   folder, playtime, serial) is on the right.
 - **No button at all** means the library is empty — nothing has been scanned
-  into `~/.cache/games-menu/library.json` yet — or the logs have an error.
+  into `~/.cache/games-library/library.json` yet — or the logs have an error.
 
 `reload` does not recompile the schema; after editing the `.gschema.xml` run
 `glib-compile-schemas src/schemas` and `stop` + `start`. A `say` text must not
@@ -139,7 +139,7 @@ contain an apostrophe — steps are shell-split.
 
 `logs` first. A JS exception during enable leaves the previous UI on screen, which
 reads as "no change". `logs` hides D-Bus activation and portal chatter; `logs 200
---all` shows everything. `[Games Menu]` lines are the extension's own; the
+--all` shows everything. `[Games Library]` lines are the extension's own; the
 rest are from other extensions, loaded alongside.
 
 ## Gotchas
@@ -152,8 +152,8 @@ rest are from other extensions, loaded alongside.
   on its first write, so a setting changed from the real session while a nested
   shell runs is silently lost once anything in the nested one writes a key.
   Change settings **before** `start` or **after** `stop`, then re-check with
-  `gsettings --schemadir src/schemas list-recursively org.gnome.shell.extensions.games-menu`.
-- **`start` enables Games Menu** if dconf doesn't list it — which writes
+  `gsettings --schemadir src/schemas list-recursively org.gnome.shell.extensions.games-library`.
+- **`start` enables Games Library** if dconf doesn't list it — which writes
   `enabled-extensions`, so the real session will load it at the next login too.
 - **`library-opens-in` and `detail-opens-in` are dconf settings**, so set them
   before `start` — or with `run gsettings` to watch a live switch. A `shot` or
@@ -186,17 +186,17 @@ rest are from other extensions, loaded alongside.
   unclaimed on the throwaway bus) because the shell refuses unknown callers. Never
   try that against the real session.
 - **Other extensions load too** (the nested shell reads the same extension list), so
-  their log lines and top-bar icons appear alongside Games Menu — which is
+  their log lines and top-bar icons appear alongside Games Library — which is
   also the way to see it beside another library with a button of its own: both
   buttons beside Show Apps, and a press of one with the other's grid up in the
   overview closing and reopening the overview onto the one pressed.
 - **The mirror needs GStreamer's PipeWire plugin.** If `mirror on` fails, use
   `start --headless` and screenshots, and tell the user.
-- **Driving the prefs window:** `./scripts/nested.sh run gnome-extensions prefs games-menu@jackicus &`
+- **Driving the prefs window:** `./scripts/nested.sh run gnome-extensions prefs games-library@jackicus &`
   opens it inside the nested session, where `shot` and the mirror both show it.
   The Extensions app outlives its window and keeps the `prefs.js` it first
   imported, so after editing it kill *the nested one* before reopening — the
-  process whose environment has `WAYLAND_DISPLAY=games-menu-dev`, never a
+  process whose environment has `WAYLAND_DISPLAY=games-library-dev`, never a
   bare `pkill -f`, which also matches the real session's, your own shell and
   any other repo's nested one.
 - **Never press Rescan in the nested prefs window.** It runs the scanner with
