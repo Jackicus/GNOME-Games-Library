@@ -17,8 +17,8 @@ import {ACTIONS, NATIVE_KEYS, padLabel} from './lib/actions.js';
 // `credentials` setting. A source with no `fields` needs no key, and still
 // gets a row of the same shape with the entry greyed out.
 //
-// `service` is the folder the key drop is read from (~/Documents/keys/IGDB/),
-// shared with other projects; `file` is the file inside it.
+// `service` is the folder the key drop is read from (~/Documents/keys/IGDB/);
+// `file` is the file inside it.
 const SOURCES = {
     steam: {
         title: 'Steam',

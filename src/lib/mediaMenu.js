@@ -98,10 +98,10 @@ export class MediaMenu {
         // Show Apps' own checked state says whether the grid is up: the shell
         // checks it as the grid opens and unchecks it on every way out —
         // Escape, a swipe, a search, leaving the overview — so that is what
-        // our view follows. (The app display's visibility does not: it is held
-        // on for the whole slide down to the window picker, which used to
-        // leave a view up with nothing showing it and Show Apps still ours,
-        // so the next click on it went nowhere.)
+        // our view follows. (The app display's visibility does not: it stays
+        // held on for the whole slide down to the window picker, so a view
+        // read from it can be left up with nothing showing it and Show Apps
+        // still ours.)
         //
         // Unchecked with our view up in an overview a button of ours opened,
         // that is Show Apps pressed — or the app grid stepped down from — and

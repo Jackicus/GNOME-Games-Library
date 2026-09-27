@@ -563,8 +563,7 @@ Everything below is what keeps them from breaking each other; keep it true.
   out of GSettings is fine, which is how the scanner gets them. Never run the
   scanner with `--from-settings` to test (it reads the real keys and goes
   online); see `src/backend/CLAUDE.md`. `~/Documents/keys/<SERVICE>/` is the
-  user's key drop shared with other projects, and each key row's Import button
-  reads it from there.
+  user's key drop, and each key row's Import button reads it from there.
 - **The 48 floor is the theme's, not the architecture's.** Every shell class
   and private field this extension reaches is identical from 48.0 to 50.4; what
   actually stops it going lower is CSS — the whole accent palette is
