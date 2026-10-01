@@ -155,8 +155,8 @@ PCSX2 cover gets a drawn placeholder.
 The **Controls** page binds each action — the four directions, Select, Back,
 Home and a page each way — to keys and to controller buttons. Xbox,
 PlayStation and most other pads work as they are, and the Guide button opens
-the library whenever no window has the keyboard. Controllers are only listened
-to while the library is on screen, so your games are left alone. It uses
+the library whenever no window has the keyboard. Controller input is only acted
+on while the library is on screen, so your games are left alone. It uses
 libmanette, which most GNOME desktops already have.
 
 ## Alongside other extensions
@@ -189,9 +189,11 @@ make pack      # build dist/games-library@jackicus.shell-extension.zip
 ```
 
 Edits to `extension.js` or `metadata.json` still need a log out and back in.
-`CLAUDE.md` is the design document: how the pieces fit together, which shell
-internals are used and why, and the traps that bite. [`docs/`](docs/) covers
-the private API the extension depends on, compatibility, and publishing.
+`make check` runs the checks CI runs: ESLint, the schema, and the scanner.
+`CLAUDE.md` and `.claude/rules/` are the design notes: how the pieces fit
+together, which shell internals are used and why, and the traps that bite.
+[`docs/`](docs/) covers the private API the extension depends on,
+compatibility, and publishing.
 
 The screenshots are of a made-up library (`scripts/demo_library.py`): the games
 and their artwork are invented, drawn by that script, and taken in a nested

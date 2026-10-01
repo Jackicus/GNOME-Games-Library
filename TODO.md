@@ -20,9 +20,9 @@ The plan is to add a GJS backend, not to replace the Python one:
 
 | File | Job |
 |---|---|
-| `scan_library.py` | CLI entry (`--from-settings`, `--steam-path`, `--pcsx2-path`, `--sources`, `--offline`); reads the settings, runs the scanner, merges with the previous `library.json`, writes it under a file lock (`fcntl`) |
+| `scan_library.py` | CLI entry (`--from-settings`, `--steam-path`, `--pcsx2-path`, `--sources`, `--offline`, `--out`); reads the settings, runs the scanner, enriches every game on a thread pool, writes a fresh `library.json` (no merge with the previous one) under a file lock (`fcntl`), then prunes the art cache |
 | `games_scanner.py` | Finds installed games: Steam's library files (`libraryfolders.vdf`, `appmanifest_*.acf`) and PCSX2's PS2 disc images and ini |
-| `metadata.py` | Steam store details and artwork for Steam games; IGDB (Twitch OAuth token, then the IGDB API) for the rest; downloads artwork into the cache; runs lookups in parallel threads |
+| `metadata.py` | Steam store details and artwork for Steam games; IGDB (Twitch OAuth token, then the IGDB API) for PS2 discs; downloads and scales artwork into the cache; thread-safe for the scanner's pool |
 
 Rescan runs it from `src/prefs.js` (`python3 backend/scan_library.py …`). The
 shell side only reads `library.json` (`src/lib/library.js`).
@@ -51,7 +51,7 @@ shell side only reads `library.json` (`src/lib/library.js`).
       between backends.
 - [ ] Port `metadata.py`: Steam store lookups, the IGDB token and queries (send
       the client secret in the POST body), the art cache layout.
-- [ ] Port `scan_library.py`: merge with the previous library, the lock.
+- [ ] Port `scan_library.py`: the atomic write, the lock, the cache prune.
 - [ ] Add the `scan-backend` setting, and a row for it in the preferences.
 - [ ] Make the preferences run whichever backend the setting names.
 - [ ] Check both backends give the same `library.json` for the demo library

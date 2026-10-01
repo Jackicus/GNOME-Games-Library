@@ -188,7 +188,7 @@ export const MediaPanel = GObject.registerClass({
 
     // A click on the shade, outside the panel, closes it. Clutter.ClickGesture
     // is 49 and later; on 48 this is the shell's own AppFolderDialog click
-    // action (`git show 48.0:js/ui/appDisplay.js`, line 2497). Chosen once,
+    // action (48.0's `appDisplay.js`). Chosen once,
     // here, so nothing else in the extension has to know the difference.
     _addClickAway() {
         if (Clutter.ClickGesture) {

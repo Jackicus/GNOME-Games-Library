@@ -1,6 +1,19 @@
 # Backend
 
-API-key handling rules live in the root `CLAUDE.md` and apply here.
+The kit's `live-session.md` rules on secrets and online scans apply here: never print a
+key, never run `--from-settings` to test (Gotchas below).
+
+`scan_library.py` is the entry point: it scans (`games_scanner.py`), enriches each game
+on a pool of `ENRICH_WORKERS` threads (`metadata.py`; nearly all of it is waiting on
+other people's servers), and writes `library.json` to a `.tmp` and `os.replace`s it in,
+under an `flock`, so two scans never write over each other and the shell's file monitor
+never sees half a file. Under `--from-settings` it reads the preferences itself (paths,
+`games-sources`, `games-online`, `credentials`), so which setting becomes which flag is
+decided here alone; the Rescan button and `./scripts/dev.sh scan` both just run it.
+
+Artwork is scaled on the way into the cache (`POSTER_BOX`, `BACKDROP_BOX`) and the cache
+is pruned after each scan, but only when writing the real `library.json`: a run with
+`--out` elsewhere shares the one cache, and would prune artwork the real library names.
 
 ## Games
 
@@ -21,11 +34,15 @@ and the keyless `cdn.cloudflare.steamstatic.com` when it has not; the keyless
 store API adds the synopsis, genres, year and Metacritic score. PS2 games use
 PCSX2's own cover (matched by title or serial) and fall back to IGDB. A game's
 source is chosen by its platform, not by the order of `games-sources`; the
-order only decides which IGDB credential slot is tried first. IGDB's Twitch
-client id and secret are one slot (`igdb@1`) in the `credentials` setting,
-tab-separated, which the scanner reads itself under `--from-settings`; only a
-standalone run falls back to `$GAMES_LIBRARY_IGDB_CLIENT_ID` /
-`$GAMES_LIBRARY_IGDB_CLIENT_SECRET`.
+order only decides which IGDB credential slot is tried first. A list entry is a
+source with a **credential slot**: `igdb` is `igdb@1`, `igdb@2` a second key tried
+when the first fails or finds nothing. Slots live in the `credentials` setting
+(`a{ss}`; IGDB's Twitch client id and secret tab-separated in one slot, and
+`prefs.js` declares the same fields). A source whose slot is empty skips itself,
+which is why IGDB sits unkeyed in the default list. Only a standalone run falls
+back to `$GAMES_LIBRARY_IGDB_CLIENT_ID` / `$GAMES_LIBRARY_IGDB_CLIENT_SECRET`;
+never argv. A cached record keeps the source that answered (`provider`), so a game
+already answered is not fetched again; `games-online` off reads the cache only.
 
 Launching is an argv list in the item — `xdg-open steam://rungameid/<appid>`,
 or the PCSX2 binary with `-fullscreen -- <disc>` — which `lib/app.js`
