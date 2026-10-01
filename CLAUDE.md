@@ -33,9 +33,10 @@ global.
   filled as they scroll. `src/icons/library-symbolic.svg`: the button's gamepad.
 - `src/prefs.js`: General, Controls and Games pages (`.claude/rules/prefs.md`).
 - `src/backend/`: the Python scanner; `src/backend/CLAUDE.md`.
-- `scripts/`: `dev.sh`, `nested.sh` with `nested_driver.py`, `dev-extension.js`,
-  `demo_library.py`, `vpad.py`, `stallwatch.py`. `docs/`: private API, compatibility,
-  publishing.
+- `scripts/`: the kit's `dev.sh`, `nested.sh`, `nested_driver.py`, `dev-extension.js`,
+  `kit.mk` (synced from the kit); its own `ext.conf`, `dev.d/games.sh` (`scan`, `scanner`,
+  `stalls`), `nested.d/games.sh` (the demo library), `demo_library.py`, `vpad.py`,
+  `stallwatch.py`. `docs/`: private API, compatibility, publishing.
 
 The section's identity (its key, its `games-` settings, its title, its icon) is
 `SECTIONS` in `lib/library.js` and nothing else restates it: `prefs.js` imports that list
@@ -107,14 +108,13 @@ the modal library's own panel (`app.js` `_onShortcut`).
 
 Other extensions in the same shell (docks, Dash to Panel, Blur my Shell, other libraries)
 put buttons beside Show Apps, put a grid in the same app-grid slot, hook the same shell
-and Dash to Panel methods, and read the same pads.
-What keeps them from breaking each other; keep it true.
+and Dash to Panel methods, and read the same pads. What keeps them apart; keep it true.
 
 - **Its prefixes**: GObject classes `GamesLibrary…` (`GamesLibraryMediaView`,
   `GamesLibraryPanel`, `GamesLibraryLibraryIcon`, …), CSS `gm-`, the blur effect
-  `games-library-panel-blur`; settings `org.gnome.shell.extensions.games-library`,
-  cache `~/.cache/games-library/`, staging `$XDG_RUNTIME_DIR/games-library/`, log prefix
-  `[Games Library]`, nested shell `games-library-dev` in
+  `games-library-panel-blur`; settings `org.gnome.shell.extensions.games-library`, cache
+  `~/.cache/games-library/`, staging `$XDG_RUNTIME_DIR/games-library/shell-<pid>/`, log
+  prefix `[Games Library]`, nested shell `games-library-dev` in
   `$XDG_RUNTIME_DIR/games-library-nested/`. Shell classes (`app-folder-dialog`,
   `overview-tile`, `button`) are shared on purpose.
 - **Two monkey-patches, both chained.** `mediaMenu.js` wraps the overview layout's
@@ -128,20 +128,20 @@ What keeps them from breaking each other; keep it true.
   `_foldWorkspaces` looks the class's method up on every call (Dash to Dock patches
   this very method on the prototype) and measures its own slot off the class, not off
   what another wrapper may have grown.
-- **Two views, one app grid.** A library shows its grid by adding a view to
-  `appDisplay` and hiding `appDisplay._box`. If the grid is up with someone else's view
-  in it (`MediaMenu._otherViewUp`), our button, shortcut or Home does not draw over it:
-  `open` hides the overview and reopens onto ours from the `hidden` handler (`_next`,
-  `_reopenId`). Only one view is ever up, so each fold wrapper grows the slot only for
-  its own.
+- **Two views, one app grid.** A library shows its grid by adding a view to `appDisplay`
+  and hiding `appDisplay._box`. If the grid is up with someone else's view in it
+  (`MediaMenu._otherViewUp`), our button, shortcut or Home does not draw over it: `open`
+  hides the overview and reopens onto ours from the `hidden` handler (`_next`,
+  `_reopenId`). Only one view is ever up, so each fold wrapper grows the slot only for its
+  own.
 - **Controllers.** Another extension may read the same pads; each acts only while its
   own library is up, except Home. Home here is Guide (`pad-home` `button:316`) and
   `keys-home` is empty, leaving Menu (`button:315`) and a remote's HomePage key to
   others. `_controlsOpen` refuses while any window has the focus or any modal grab is
   up (`Main.modalCount > 0`).
 - **Workspaces.** `_emptyWorkspace` (`play-on-new-workspace`) skips a workspace with
-  `_keepAliveId` set (the shell's during a drag, or another extension's), and never
-  sets it.
+  `_keepAliveId` set (the shell's during a drag, or another extension's), and never sets
+  it.
 
 ## Design rules
 
@@ -188,13 +188,13 @@ What keeps them from breaking each other; keep it true.
 
 ## Checking and landing
 
-`make check` is everything that needs no shell: `make lint`, then `./scripts/dev.sh
-check`, which compiles the schema with `--strict` (dry run), byte-compiles the Python and
-runs the scanner `--offline` against an empty scratch `HOME`. CI runs it in the kit's
-Arch container. `make pack` (needs `gnome-extensions`) builds the zip and `check_pack`
-fails on any file missing from it or that should not ship.
+`make check` needs no shell: `make lint`, then `./scripts/dev.sh check`: the schema with
+`--strict` (dry run), then `scanner` (`EXT_CHECKS`: the Python byte-compiled, the scanner
+`--offline` against an empty scratch `HOME`). CI runs it in the kit's Arch container.
+`make pack` packs exactly what `EXT_SHIP` names and fails on any file missing or extra. A
+pushed `v*` tag is a release (`.github/workflows/release.yml`).
 
-Seeing a change is the nested shell: `.claude/skills/drive-extension/SKILL.md` for its
-coordinates, `--demo`, the virtual pad and what must never be pressed. `/reload`, `/logs`,
-`/status` and `/preview` use it; `make reload` is the user's own session, theirs to run.
-Screenshots in `docs/screenshots/` are of `./scripts/nested.sh start --clean --demo` only.
+Seeing a change is the nested shell, whose settings are always its own: the drive skill
+(`.claude/skills/drive-extension/SKILL.md`) for its coordinates, `--stand-in`, the pad and
+what never to press. `/reload`, `/logs`, `/status` and `/preview` use it; `make reload` is
+the user's session, theirs to run. `docs/screenshots/` are of `start --stand-in` only.

@@ -15,26 +15,26 @@ repeating what it covers.
 make pack
 ```
 
-This runs `scripts/dev.sh pack` (`cmd_pack`), which:
+This runs `scripts/dev.sh pack` (`cmd_pack`, the kit's shared script), which:
 
-1. checks the schema with `glib-compile-schemas --strict --dry-run
-   "$SRC_DIR/schemas"` and stops if it fails — the same check an install
-   enforces, run as part of every pack rather than left as a manual step;
-2. copies `src/` into a temporary staging directory, strips it with
-   `strip_unshipped` (`__pycache__/`, `*.pyc`, every `CLAUDE.md` including
-   `src/backend/CLAUDE.md`) and the compiled schema, and copies the repo
-   root's `LICENSE` into the stage;
-3. runs `gnome-extensions pack --force --extra-source=lib --extra-source=backend
-   --extra-source=icons --extra-source=LICENSE -o dist .` from inside that
-   staged copy. `gnome-extensions` adds `extension.js`, `metadata.json`,
-   `prefs.js`, `stylesheet.css` and every `schemas/*.gschema.xml` itself
-   (`command-pack.c`); `lib/`, `backend/`, `icons/` and `LICENSE` all need
-   naming because none of them is one of its recognised top-level files;
-4. calls `check_pack`, which computes the expected file list (`extension.js
-   prefs.js metadata.json stylesheet.css schemas/*.gschema.xml LICENSE`, every
-   `lib/*.js`, every `backend/*.py` outside `__pycache__`, every `icons/*.svg`)
-   and diffs it against `unzip -Z1` of the built zip, failing loudly and
-   naming both what's missing and what shouldn't be there on any mismatch;
+1. checks the schema with `glib-compile-schemas --strict --dry-run` and stops
+   if it fails — the same check an install enforces, run as part of every pack
+   rather than left as a manual step;
+2. copies exactly what ships into a temporary staging directory (`stage_ship`):
+   `extension.js`, `prefs.js`, `metadata.json`, `stylesheet.css`, the schema
+   XML, every file `scripts/ext.conf`'s `EXT_SHIP` names (`lib/*.js`,
+   `backend/*.py` outside `__pycache__`, `icons/*.svg`) and the repo root's
+   `LICENSE`. Nothing else under `src/` is copied, so `src/backend/CLAUDE.md`,
+   bytecode and the compiled schema never reach the stage;
+3. runs `gnome-extensions pack` on that stage with an `--extra-source` for each
+   of `lib`, `backend`, `icons` and `LICENSE`. `gnome-extensions` adds
+   `extension.js`, `metadata.json`, `prefs.js`, `stylesheet.css` and every
+   `schemas/*.gschema.xml` itself (`command-pack.c`); the rest all need naming
+   because none of them is one of its recognised top-level files. If the tool
+   compiled the schema into the zip, that file is deleted from it;
+4. diffs the stage's file list against `unzip -Z1` of the built zip, failing
+   loudly and naming both what's missing and what shouldn't be there on any
+   mismatch;
 5. deletes the staging directory and reports
    `dist/games-library@jackicus.shell-extension.zip`.
 
@@ -61,13 +61,13 @@ What each shipped part is:
 
 What is left out, and why it is safe to leave out:
 
-- **`src/schemas/gschemas.compiled`** — deleted from the stage before packing.
+- **`src/schemas/gschemas.compiled`** — never copied into the stage.
   GNOME 44 onward compiles the schema on install rather than expecting it in
   the zip (`extensionDownloader.js` runs `glib-compile-schemas --strict` after
   unzipping an EGO download).
-- **`__pycache__/`, `*.pyc`** — stripped by `strip_unshipped` (its
-  `strip_pycache`).
-- **`src/backend/CLAUDE.md`** — stripped by `strip_unshipped`.
+- **`__pycache__/`, `*.pyc`** — `EXT_SHIP` copies `backend/*.py` only, outside
+  `__pycache__`.
+- **`src/backend/CLAUDE.md`** — not named by `EXT_SHIP`, so never copied.
 - **`scripts/`, `README.md`, `CLAUDE.md`, `docs/`, `.claude/`, `.git`, `dist/`** — never
   part of `src/`, so never seen by the packer at all; `--extra-source` only
   reaches directories under the packed tree.
@@ -117,8 +117,8 @@ which is not what ships. Only an installed zip runs the real `src/extension.js`
 and proves the packed `backend/` and `icons/` paths resolve the way its
 `this.dir`-relative code expects.
 
-`make install` is not the same test either. It copies `src/` with rsync, so it
-never runs what `make pack` put in the zip. The installed copy also runs its
+`make install` is not the same test either. It copies the same files the zip
+holds (the same `stage_ship`), but never runs the zip itself. The installed copy also runs its
 own `backend/`, so press Rescan in its preferences once.
 
 ## metadata.json
@@ -214,9 +214,9 @@ that it is still hooked before doing anything, and the comments where it is put
 on say why. Expect the question anyway.
 
 Under the dev entry point (`scripts/dev-extension.js`, never shipped), the
-staged copy of `lib/` in `$XDG_RUNTIME_DIR/games-library/lib-<stamp>/` also
-outlives `disable()`, kept on purpose so the next `enable()` can reuse or sweep
-it ([private-api.md](private-api.md#not-shell-internals-staging-lib)).
+staged copy of `lib/` in `$XDG_RUNTIME_DIR/games-library/shell-<pid>/lib-<stamp>/`
+also outlives `disable()`, kept on purpose so the next `enable()` can reuse or
+sweep it ([private-api.md](private-api.md#not-shell-internals-staging-lib)).
 
 `extension.js`'s own `disable()` carries no try/catch: `this._app.disable();
 this._app = null;`. A throw there reaches the shell, same as a throw from
@@ -289,11 +289,12 @@ never in what ships:
 
 `scripts/dev-extension.js`, the entry point `make link` installs in place of
 `src/extension.js`, hashes `lib/` on every `enable()`, copies it into
-`$XDG_RUNTIME_DIR/games-library/lib-<stamp>/`, deletes every other stage there,
-and imports `app.js` from the copy with `await import('file://...')`. The
-purpose is to defeat GJS's module cache during development. It is not in the
-zip, and `check_pack` (`scripts/dev.sh cmd_pack`) fails the build if it ever
-ends up there — see [private-api.md](private-api.md#not-shell-internals-staging-lib).
+`$XDG_RUNTIME_DIR/games-library/shell-<pid>/lib-<stamp>/`, deletes this shell's
+other stages and those of shells that are gone, and imports `app.js` from the
+copy with a dynamic `import()`. The purpose is to defeat GJS's module cache
+during development. It is not in the zip: `make pack` (`scripts/dev.sh
+cmd_pack`) fails the build on any file it did not stage, and the release
+workflow checks the zip for it by name — see [private-api.md](private-api.md#not-shell-internals-staging-lib).
 The shipped `src/extension.js` has none of this: a plain, static `import` of
 `lib/app.js`.
 
@@ -598,8 +599,8 @@ and artwork, and multimedia.
   cover art, since a screenshot of a real library is a grid of publishers'
   artwork. The ones in `docs/screenshots/` avoid the question: they are of a
   made-up library, invented games with artwork drawn by
-  `scripts/demo_library.py`, taken with `./scripts/nested.sh start --clean
-  --demo`. Use those, or new ones taken the same way.
+  `scripts/demo_library.py`, taken with `./scripts/nested.sh start
+  --stand-in`. Use those, or new ones taken the same way.
 
 ### IGDB attribution: still open
 
@@ -614,9 +615,9 @@ detail pop-up for a PS2 disc at minimum, and the Games preferences page.
 ### Don't include unnecessary files: meets
 
 The zip holds what runs: the entry points, `lib/`, `backend/`, `icons/`, the
-stylesheet, the schema and `LICENSE`. Bytecode and notes are stripped, and
-`make pack`'s `check_pack` fails on any file missing from the zip or in it that
-should not be ([Building the zip](#building-the-zip)).
+stylesheet, the schema and `LICENSE`. Only what `scripts/ext.conf`'s
+`EXT_SHIP` names is staged, so bytecode and notes never are, and `make pack`
+fails on any file missing from the zip or in it that should not be ([Building the zip](#building-the-zip)).
 
 ### Use a linter: meets
 

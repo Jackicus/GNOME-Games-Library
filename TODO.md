@@ -57,7 +57,7 @@ shell side only reads `library.json` (`src/lib/library.js`).
 - [ ] Check both backends give the same `library.json` for the demo library
       (`scripts/demo_library.py`) and for a real one; diff the two files.
 - [ ] Time a full scan and a rescan with each, and write the numbers here.
-- [ ] Update `make pack`'s `check_pack` for the new files, and
+- [ ] Name the new files in `scripts/ext.conf`'s `EXT_SHIP` (what `make pack` ships), and
       `docs/publishing.md` ("Scripts and binaries").
 
 ### Done when

@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 """A virtual Xbox 360 pad on /dev/uinput, for testing lib/controls.js with no
-controller to hand. Run it in the background, then write lines to the FIFO:
+controller to hand. Run it in the background by its full path (scripts/ext.conf
+names that in NESTED_STRAYS, so `nested.sh stop` sweeps one left running), then
+write lines to the FIFO:
 
-  ./scripts/vpad.py /path/to/pad.fifo &
+  "$PWD"/scripts/vpad.py /path/to/pad.fifo &
   echo "tap A" > /path/to/pad.fifo
 
   tap A|B|X|Y|LB|RB|START|BACK|GUIDE     press and release a button

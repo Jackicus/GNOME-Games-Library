@@ -7,8 +7,9 @@ cache's own caps — but for games that do not exist, with artwork drawn here.
 The README's screenshots are of this rather than of anyone's real library:
 nobody's collection goes into a public repo, and nobody's artwork either.
 
-`nested.sh start --demo` runs it and points the nested session's
-XDG_CACHE_HOME at the result, so the extension reads it and nothing else.
+`nested.sh start --stand-in` (or `--demo`) runs it through the nested_stand_in
+hook in scripts/nested.d/games.sh, into the stand-in home's cache, which is the
+nested session's XDG_CACHE_HOME: the extension reads it and nothing else.
 Every folder inside is under /demo and is never opened, and Play runs
 `true`, so a press of it launches nothing.
 """
