@@ -6,12 +6,12 @@ that open the way an app folder does. None of that has a public API. This is
 everything it reaches into, for reviewers on extensions.gnome.org and for
 whoever ports it to the next GNOME.
 
-Every entry was checked against the GNOME Shell 50.5 JavaScript on the test
-machine (extracted from `/usr/lib/gnome-shell/libshell-18.so`) and against the
+Every entry was checked against the GNOME Shell 50.5 JavaScript on the main
+desktop (extracted from `/usr/lib/gnome-shell/libshell-18.so`) and against the
 `48.0`, `49.0` and `51.0` tags of `GNOME/gnome-shell` and `GNOME/mutter` on
 gitlab.gnome.org. The Dash to Panel entries were checked against Dash to Panel
 74, and the Blur my Shell entry against Blur my Shell 72, both as installed on
-the test machine. Unless an entry says otherwise, the field or method exists
+the main desktop. Unless an entry says otherwise, the field or method exists
 with the same meaning in all of them. Line numbers are left out on purpose,
 because `src/` is changing; functions are named instead.
 

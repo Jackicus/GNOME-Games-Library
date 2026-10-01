@@ -11,11 +11,12 @@ version and says what to check first on each. Below, "claimed version"/
 
 ## What has been tested
 
-- **The development machine:** GNOME Shell 50.5 on CachyOS (Arch-based),
-  Wayland, with an NVIDIA GeForce GTX 1080 on the proprietary driver
-  580.178.04. The rest of the stack on that machine: mutter 50.5, GJS 1.88.1,
+- **The main desktop** (the development machine): GNOME Shell 50.5 on CachyOS
+  (Arch-based), Wayland, with an NVIDIA GeForce GTX 1080 on the proprietary
+  driver 580.178.04. The rest of the stack on that machine: mutter 50.5, GJS 1.88.1,
   GLib 2.88.3, GTK 4.22.5, libadwaita 1.9.4, libmanette 0.2.13, Python 3.14.7
-  with Pillow 12.3.0, PyGObject 3.56.3 and gdk-pixbuf 2.44.7.
+  with Pillow 12.3.0, PyGObject 3.56.3 and gdk-pixbuf 2.44.7. A bare `50.5` on
+  this page is that machine's installed shell (the Intel all-in-one runs 50.4).
 - **Other extensions installed there:** Dash to Panel 74 and Blur my Shell 72,
   both enabled in the session, and Dash to Dock 109, installed but not enabled.
   The Dash to Panel and Blur my Shell code this extension depends on was read in
@@ -23,11 +24,11 @@ version and says what to check first on each. Below, "claimed version"/
 
 How far that goes:
 
-- **Games Library has not been enabled in the real session on that machine.** The
+- **Games Library has not been enabled in the real session on the main desktop.** The
   journal has no `Games Library` line in any boot it still holds, and there is no
   `~/.cache/games-library/`, so no scan has written a real library there either.
-- **It has been run in the nested shell** (`scripts/nested.sh`): the same
-  gnome-shell 50.5 binary, run as
+- **It has been run in the nested shell** (`scripts/nested.sh`): the main
+  desktop's gnome-shell 50.5 binary, run as
   `gnome-shell --wayland --headless --virtual-monitor 1600x900` on its own
   session bus, from the development link (`make link`). On 2026-09-25 it was
   run as `start --clean --demo` — Games Library the only extension enabled, a
@@ -64,9 +65,9 @@ Nothing else has been tested:
 - **No X11 session.** 48 has one, 49 turns it off by default, and 50 removed it
   (gjs.guide, "Port Extensions to GNOME Shell 49" and "... 50"). Nothing in the
   code branches on the session type.
-- **No other GPU.** Nothing here draws with its own shaders. The one GPU effect
-  is a `Shell.BlurEffect`, and only when Blur my Shell has put one on the app
-  folders.
+- **No GPU but the main desktop's NVIDIA.** Nothing here draws with its own
+  shaders. The one GPU effect is a `Shell.BlurEffect`, and only when Blur my
+  Shell has put one on the app folders.
 
 ## Why 48 is the floor
 
@@ -230,12 +231,12 @@ on by default, so the shell process loads it at `enable()` when it is
 installed.
 
 - The import names no version, so GJS takes whichever Manette typelib is
-  installed. Only `Manette-0.2` exists here.
+  installed. Only `Manette-0.2` exists on the main desktop.
 - `Manette.Device.get_guid()`, which both files call for every input, is marked
   `version="0.2.10"` in `Manette-0.2.gir`. With an older libmanette the library
   loads, and every controller input then throws inside its signal handler.
   Nothing checks for this.
-- On this machine libmanette is there because WebKitGTK needs it
+- On the main desktop libmanette is there because WebKitGTK needs it
   (`pacman -Qi libmanette`: required by `webkit2gtk-4.1` and `webkitgtk-6.0`).
   Nothing guarantees it elsewhere.
 
@@ -247,7 +248,7 @@ with B. Unplug the controller and plug it back in.
 
 The preferences run in a separate process on whatever GTK and libadwaita the
 system has. GNOME 48 was released with GTK 4.18 and libadwaita 1.7. The
-versions below are the ones marked in this machine's `Adw-1.gir` and
+versions below are the ones marked in the main desktop's `Adw-1.gir` and
 `Gtk-4.0.gir`.
 
 | Widget or call | Needs | In GNOME 48's stack |
@@ -278,7 +279,7 @@ The Rescan button runs `python3 <extension>/backend/scan_library.py
 
 - **Python 3.7 or later**, by reading. The three files parse with Python's own
   parser set to the 3.6 grammar, but `subprocess.run(capture_output=True,
-  text=True)` is 3.7. Only 3.14.7 is on this machine.
+  text=True)` is 3.7. Only 3.14.7 is on the main desktop.
 - **The standard library only**, plus `fcntl` (so Unix only) for the lock on
   `library.json`. Online lookups are `urllib` over HTTPS.
 - **`gsettings`** (from GLib) on `PATH`, for `--from-settings`. The scanner
@@ -287,8 +288,8 @@ The Rescan button runs `python3 <extension>/backend/scan_library.py
 - **Image scaling is optional, and needed for artwork.** `metadata.py`
   `_scaler()` uses Pillow if it imports, and otherwise GdkPixbuf through
   PyGObject. With neither, `fit_image()` returns `None`, no artwork is kept,
-  and every game gets the drawn placeholder. There is no error. On this
-  machine PyGObject is there because mutter requires it, and Pillow because
+  and every game gets the drawn placeholder. There is no error. On the main
+  desktop PyGObject is there because mutter requires it, and Pillow because
   Inkscape and Matplotlib do (`pacman -Qi`). Neither was installed for this
   extension.
 

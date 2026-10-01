@@ -168,17 +168,18 @@ What keeps them from breaking each other; keep it true.
 - **Play is a real launch**, from the nested shell too: `xdg-open steam://…` reaches the
   user's Steam. **Rescan runs the scanner with `--from-settings`**: real keys, online.
   Never press either to test.
-- **The shares idle out, and one can be offline.** `/media/LENOVO` and `/media/HP-AIO`
-  are systemd automounts with a 60 s idle timeout; an offline share blocks every
-  toucher for its connect timeout (11 s measured). A PS2 disc folder can be there, so
-  nothing in `lib/` or `prefs.js` touches a game's folder synchronously
-  (`query_info_async`, `launch_default_for_uri_async` for Show in Files); only the
+- **The shares idle out, and one can be offline.** On the main desktop, `/media/LENOVO`
+  and `/media/HP-AIO` are systemd automounts with a 60 s idle timeout; an offline
+  share blocks every toucher for its connect timeout (11 s measured there). A PS2
+  disc folder can be there, so nothing in `lib/` or `prefs.js` touches a game's folder
+  synchronously (`query_info_async`, `launch_default_for_uri_async` for Show in Files); only the
   local cache is read synchronously. `make stalls` logs to `dist/stalls.log`
   (`autofs_wait` is an automount being mounted, `cifs_*` a share answering slowly).
 - **API keys** are in the `credentials` setting in plain text (the README and the
   schema's comment say so; the preferences do not yet).
-- **The 48 floor is the theme's**, not the shell internals' (identical from 48.0 to
-  50.4): `St.BoxLayout({orientation})` and libadwaita 1.7's `Adw.ToggleGroup` are 48+.
+- **The 48 floor is the theme's**, not the shell internals' (identical in GNOME 48 to
+  50, `docs/compatibility.md`): `St.BoxLayout({orientation})` and libadwaita 1.7's
+  `Adw.ToggleGroup` are 48+.
 - **Private shell API** is listed in `docs/private-api.md`, with what breaks. In short:
   the overview grid going missing after an upgrade is `mediaMenu.js`'s reach into
   `Main.overview._overview.controls`; the button missing beside Show Apps is
