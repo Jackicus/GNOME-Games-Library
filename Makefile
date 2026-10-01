@@ -1,47 +1,13 @@
-# Thin front door; all logic lives in scripts/: dev.sh for the extension
-# itself, nested.sh for the throwaway shell the visual checks run in.
-DEV := ./scripts/dev.sh
-NESTED := ./scripts/nested.sh
+# The kit's targets (link, install, reload, logs, pack, check, nested, ...;
+# 'make' alone lists them), then Games Library's own.
+include scripts/kit.mk
 
-.PHONY: all link install reload logs pack scan uninstall status stalls clean help \
-        nested nested-headless nested-stop nested-status preview lint check
+.PHONY: scan stalls
 
-all: install
+# Scan the installed games into the real cache: the user's to run.
+scan:
+	@$(DEV) scan
 
-link install reload logs pack scan uninstall status stalls clean:
-	@$(DEV) $@
-
-# gjs.guide's ESLint rules over the GJS code (eslint.config.mjs).
-lint: node_modules
-	@npx --no-install eslint .
-
-# Everything that needs no GNOME Shell, display or network; CI runs it
-# (.github/workflows/ci.yml) and main requires it.
-check: lint
-	@$(DEV) check
-
-node_modules: package.json
-	npm install --no-audit --no-fund
-	@touch $@
-
-# Nested shell -- a throwaway second GNOME Shell for visual testing. Opens a live
-# mirror window on the desktop so you can watch; nested-headless skips that.
-nested:
-	@$(NESTED) start
-
-nested-headless:
-	@$(NESTED) start --headless
-
-nested-stop:
-	@$(NESTED) stop
-
-nested-status:
-	@$(NESTED) status
-
-preview:
-	@$(NESTED) start >/dev/null && $(NESTED) shot
-
-help:
-	@$(DEV) help
-	@echo
-	@$(NESTED) help
+# Watch for desktop freezes; the log goes to dist/stalls.log.
+stalls:
+	@$(DEV) stalls

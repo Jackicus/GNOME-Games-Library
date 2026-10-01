@@ -786,8 +786,9 @@ Nothing is logged.
 
 ## Not shell internals: staging lib/
 
-This is `scripts/dev-extension.js`, the entry point `make link` installs in
-place of `src/extension.js`. It never ships; `make install`/`make pack` use
+This is `scripts/dev-extension.js`, the kit's development entry point, which
+`make link` installs in place of `src/extension.js` (and `nested.sh start
+--stand-in` stages the same way). It never ships; `make install`/`make pack` use
 the plain `src/extension.js` described at the top of this page, which has no
 staging, no try/catch, and imports `lib/app.js` straight from `src/`.
 
@@ -795,31 +796,37 @@ staging, no try/catch, and imports `lib/app.js` straight from `src/`.
 async enable() {
     const enabling = {};
     this._enabling = enabling;
+    const config = this._config();
     try {
-        const runDir = this._stageLib();
-        const module = await import(`file://${runDir}/app.js`);
-        const log = await import(`file://${runDir}/log.js`);
+        const lib = this._stageLib();
+        const module = await import(lib.get_child('app.js').get_uri());
+        const log = lib.get_child('log.js');
+        const verbose = log.query_exists(null) ? await import(log.get_uri()) : null;
         if (this._enabling !== enabling)
             return;
-        log.setVerbose(true);
-        this._app = new module.GamesLibraryApp(this);
+        verbose?.setVerbose?.(true);
+        const App = config.appClass ? module[config.appClass] : /* …App */;
+        this._app = new App(this);
         this._app.enable();
-        console.log(`[Games Library] Enabled from ${runDir}`);
+        console.log(`${config.logPrefix} Enabled from ${lib.get_path()}`);
     } catch (e) {
-        console.error('[Games Library] Failed to load lib/app.js:', e);
+        console.error(`${config.logPrefix} Failed to load lib/app.js:`, e);
     }
 }
 ```
 
-`_stageLib()` copies `lib/*.js` into
-`$XDG_RUNTIME_DIR/games-library/lib-<stamp>/`, building beside its final name and
-renaming it into place so a shell that goes down mid-copy leaves nothing a
-later `enable()` mistakes for a finished stage. The stamp is a SHA-256 of each
-file's name, size and modification time. It then deletes every other stage in
-that folder, and `enable()` imports from the copy. GJS caches a module by URL
-for the life of the shell, so this is how an edit under `lib/` is picked up by
-a disable and enable without logging out. An unlock re-enables into the same
-stamp, and so into the modules GJS already has.
+`config` is `dev-extension.json` beside the link, which `make link` writes from
+`scripts/ext.conf` (`GamesLibraryApp`, `[Games Library]`). `_stageLib()` copies
+`lib/` into `$XDG_RUNTIME_DIR/games-library/shell-<pid>/lib-<stamp>/`, under the
+running shell's own process id, building it under another name and renaming it
+into place so a stage that exists is always whole. The stamp is a SHA-256 of each
+file's path, size and modification time. It then deletes this shell's other
+stages and the directories of shells that no longer run, never another live
+shell's (a nested shell shares the runtime directory with the real one), and
+`enable()` imports from the copy. GJS caches a module by URL for the life of the
+shell, so this is how an edit under `lib/` is picked up by a disable and enable
+without logging out. An unlock re-enables into the same stamp, and so into the
+modules GJS already has.
 
 It is not a shell internal, and it never reaches a reviewer: it is not in the
 zip, and the code that copies and deletes files synchronously and imports from

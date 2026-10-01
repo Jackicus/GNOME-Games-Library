@@ -12,20 +12,22 @@ parts.
   normal between tasks.
 - **extension**: `ACTIVE` is healthy; `ERROR` means `enable()` threw (`/logs`);
   anything else after a `reload`, see `/logs` too.
-- **settings**: `its own (--clean)` is what tests use; `shared with the real
-  session` means a plain `start`, whose setting changes and reloads write the
-  user's real dconf.
-- **library**: `the made-up one (--demo)`, or the user's own scan (no button
-  beside Show Apps when there is none).
+- **settings**: always its own, never the user's dconf: `fresh for this run`
+  under `--stand-in`, or `kept between starts` (`start --clean` resets them).
+- **data** and **library**: `stand-in` and `the made-up one` under `--stand-in`,
+  or `your own` and the user's own scan (no button beside Show Apps when there is
+  none).
 - **mirror**: open on the desktop, or closed (`./scripts/nested.sh mirror on`).
 
 **Real session (read-only)**, from `./scripts/dev.sh status`, which only reads:
 
-- **install**: `link` means dev mode: the nested shell, and the real one at its
-  next login, run `src/` through `scripts/dev-extension.js`; `old-style
-  symlink` is a stale install, `make link` again; `copy` is a real install that
-  won't pick up edits until `make install` is re-run. The nested shell reads the
-  same install.
+- **install**: `link` means dev mode: a plain nested `start`, and the real shell
+  at its next login, run `src/` through `scripts/dev-extension.js` (a
+  `--stand-in` start runs a copy of `src/` of its own). `made before
+  dev-extension.json` under it means a link from before the kit's scripts: still
+  works, and the user's own `make link` (then a logout) brings it up to date.
+  `old-style symlink` is a stale install, `make link` again; `copy` is a real
+  install that won't pick up edits until `make install` is re-run.
 - **state**: the extension's state in the user's own shell. It says nothing about
   the edits in progress, and is never fixed by reloading or enabling there:
   that is the user's to do. `unknown to the running shell` means the UUID was
@@ -33,6 +35,6 @@ parts.
 - **cache**: `~/.cache/games-library`, holding `library.json`, `posters/`,
   `backdrops/`, `metadata/`.
 - **library**: the number of games in the user's own scan, or `not scanned yet`
-  (`/scan`, at the user's request; a test uses `start --clean --demo`).
+  (`/scan`, at the user's request; a test uses `start --stand-in`).
 
 If anything is off, say which command fixes it.
