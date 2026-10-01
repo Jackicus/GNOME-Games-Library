@@ -19,7 +19,7 @@ because `src/` is changing; functions are named instead.
 
 | Expression | File | If it changes in a future GNOME | Checked in code |
 |---|---|---|---|
-| `Main.overview._overview?.controls`, `controls.appDisplay._box` | mediaMenu.js | No `menu` library and no button in that place | Yes, logs a warning |
+| `Main.overview._overview?.controls`, `controls.appDisplay._box` | mediaMenu.js | No `menu` library: the button is there and opens nothing | Yes, logs a warning |
 | `controls._searchController` (`searchActive`) | mediaMenu.js | Starting a search with the games up closes an overview the button opened | Yes, silently |
 | `controls._stateAdjustment` (`value`, `gestureInProgress`) | mediaMenu.js | The row of workspaces stays over the top of the grid | Yes, silently |
 | `controls._workspacesDisplay`, `setPrimaryWorkspaceVisible()` | mediaMenu.js | Same | Yes, silently |
@@ -32,7 +32,7 @@ because `src/` is changing; functions are named instead.
 | `class extends Dash.ShowAppsIcon`: `_createIcon()`, `_iconActor`, `_canRemoveApp()` | libraryButton.js | No button, or the wrong icon on it | Partly: a throw logs a warning |
 | `Main.overview.dash._dashContainer`, `dash._hookUpLabel()` | libraryButton.js | No button in the dash; no tooltip | Yes, silently |
 | `global.dashToPanel.panels`, its `panels-created` signal | libraryButton.js | The button goes into the dash, which Dash to Panel hides | Yes, silently |
-| Wrapping Dash to Panel's `panel._updateGroupedElements()`; `_elementGroups`, `showAppsIconWrapper.realShowAppsIcon`, `panel.panel` | libraryButton.js | No button in the panel | Partly: a throw logs a warning |
+| Wrapping Dash to Panel's `panel._updateGroupedElements()`; `_elementGroups`, `showAppsIconWrapper.realShowAppsIcon`, `panel.panel`, `panel.geom.vertical`, `panel.updateElementPositions()` | libraryButton.js | No button in the panel | Partly: a throw logs a warning |
 | `controls._appDisplay._folderIcons`, `icon._dialog`, `dialog._viewBox` | panel.js | The pop-ups shade where Blur my Shell's folders blur | Yes, silently |
 | `DIALOG_SHADE_NORMAL` (copied) | panel.js | The shade no longer matches a folder's | No |
 | `Meta.Workspace._keepAliveId` (read only) | app.js | "Play on a new workspace" can pick a workspace someone else is holding | No |
@@ -96,8 +96,10 @@ because as far as the overview knows it is still showing the app grid.
 **Why nothing public.** The overview has no way to show anything but the apps
 in that slot.
 
-**If it changes.** No view is built and no button is attached, so the `menu`
-place has nothing. The shortcut and a controller's Home do nothing either.
+**If it changes.** No view is built, so the `menu` place has nothing. The
+button is still attached (`app.js` `_build()` attaches it whenever there are
+games), but a press of it, the shortcut or a controller's Home opens nothing:
+`MediaMenu.open()` returns at once.
 
 **Checked.** Yes, with the warning above, once per build, when there are games
 to show.
@@ -326,7 +328,7 @@ declared with a static `GObject.registerClass(this)` block, but it still
 
 **If it changes.** If `AppDisplay` stops extending it directly, the view
 extends something else. The import still succeeds, and the first press throws
-inside the button's click handler, when the view's `_init()` reaches `_box`. In
+inside the button's click handler, when the view's constructor reaches `_box`. In
 the `menu` place nothing opens. In the `modal` place the panel opens with its
 header and no grid. The error is in the journal as an exception from a signal
 handler.
@@ -335,7 +337,7 @@ handler.
 
 ### What the view touches of `BaseAppView`
 
-`MediaView._init()` and its methods:
+`MediaView`'s constructor and its methods:
 
 ```js
 this.add_child(this._box);
@@ -372,7 +374,7 @@ plus overrides of `_createGrid()`, `_loadApps()`, `_compareItems()` and
 
 **Why nothing public.** None of it is API; it is the class's own working.
 
-**If it changes.** A renamed field makes the view's `_init()` throw at the
+**If it changes.** A renamed field makes the view's constructor throw at the
 first press (previous entry). A renamed hook leaves the override here unused,
 and what the shell does instead is unverified.
 
@@ -619,6 +621,8 @@ made. `realShowAppsIcon` is Dash to Panel's own `Dash.ShowAppsIcon`, whose
 `icon.iconSize` and `toggleButton` style are copied onto the button so that it
 matches. `panel.panel` is the actor the elements are children of, and
 `updateElementPositions()` is what Dash to Panel calls to regroup.
+`panel.geom.vertical` (read with `?.`) says whether the panel runs down a side
+of the screen, which the button's box follows.
 
 **Why nothing public.** As in the previous entry.
 
@@ -637,7 +641,8 @@ nothing is logged.
 
 ## The pop-ups (panel.js)
 
-The modal library's panel and the detail pop-up are one class, `MediaPanel`.
+The modal library's panel and the detail pop-up are two subclasses of one
+class, `MediaPanel`: `LibraryPanel` (libraryWindow.js) and `DetailDialog`.
 It is the shell's `AppFolderDialog` rebuilt with the folder taken out: the
 shade, the zoom out of the icon, the grab, the click-away and the settle. It
 extends `St.Bin` and is built from exported pieces (below) rather than
@@ -754,7 +759,8 @@ Nothing is logged.
 - **`Main.wm.addKeybinding()` and `removeKeybinding()`** (app.js), with
   `Shell.ActionMode.POPUP` among the modes. This is how the shell grabs its own
   keys from a GSettings key. The shortcut does not appear in GNOME Settings.
-- **`Main.modalCount` and `Main.actionMode`** (app.js, mediaMenu.js), which
+- **`Main.modalCount`** (app.js, mediaMenu.js) **and `Main.actionMode`**
+  (app.js), which
   keep a controller's Home and the shortcut from acting over someone else's
   popup or overview.
 - **Exported shell classes and helpers:** `GrabHelper.GrabHelper` (with
@@ -782,7 +788,7 @@ Nothing is logged.
 
 This is `scripts/dev-extension.js`, the entry point `make link` installs in
 place of `src/extension.js`. It never ships; `make install`/`make pack` use
-the plain `src/extension.js` shown at the top of this page, which has no
+the plain `src/extension.js` described at the top of this page, which has no
 staging, no try/catch, and imports `lib/app.js` straight from `src/`.
 
 ```js

@@ -15,6 +15,8 @@
 #                                  stalls, processes stuck in the kernel and
 #                                  automount triggers, with timestamps
 #   ./scripts/dev.sh clean      remove compiled schemas, dist/ and unshipped files
+#   ./scripts/dev.sh check      what make check runs besides ESLint: the schema,
+#                               the Python, and an offline scan of an empty home
 #
 set -euo pipefail
 
@@ -251,6 +253,41 @@ cmd_clean() {
     ok "Cleaned compiled schemas, dist/ and bytecode caches under src/."
 }
 
+# Everything make check runs besides ESLint, with no shell, display or network,
+# so CI runs it as well: the schema as an install compiles it, every Python file
+# byte-compiled, and the scanner run --offline with HOME pointed at an empty
+# scratch directory, where it must find nothing and still write a library that
+# its own loader reads back. Nothing is written in the checkout.
+cmd_check() {
+    require glib-compile-schemas
+    require python3
+    glib-compile-schemas --strict --dry-run "$SRC_DIR/schemas" || die "The schema does not pass --strict."
+    ok "The schema compiles with --strict."
+
+    local tmp
+    tmp=$(mktemp -d)
+    # shellcheck disable=SC2064  # expanded now, on purpose
+    trap "rm -rf '$tmp'" RETURN
+    PYTHONPYCACHEPREFIX="$tmp/pycache" python3 -m py_compile \
+        "$SRC_DIR"/backend/*.py "$REPO_DIR"/scripts/*.py || die "A Python file does not compile."
+    ok "The Python compiles."
+
+    mkdir -p "$tmp/home"
+    HOME="$tmp/home" PYTHONDONTWRITEBYTECODE=1 \
+        python3 "$SRC_DIR/backend/scan_library.py" --offline >"$tmp/scan.log" 2>&1 \
+        || { cat "$tmp/scan.log" >&2; die "The offline scan failed."; }
+    local found
+    found=$(PYTHONDONTWRITEBYTECODE=1 python3 -c '
+import sys
+sys.path.insert(0, sys.argv[1])
+from scan_library import load_existing
+print(len(load_existing(sys.argv[2]).get("games", [])))' \
+        "$SRC_DIR/backend" "$tmp/home/.cache/games-library/library.json") \
+        || die "The scanner's library.json does not load."
+    [[ "$found" == 0 ]] || die "An empty home gave $found games."
+    ok "The scanner, offline, writes an empty library for an empty home."
+}
+
 # A freeze is over by the time anyone looks; this leaves a log of what stalled.
 cmd_stalls() {
     require python3
@@ -307,6 +344,7 @@ case "${1:-}" in
     status)     cmd_status ;;
     stalls)     shift; cmd_stalls "$@" ;;
     clean)      cmd_clean ;;
+    check)      cmd_check ;;
     ""|-h|--help|help) usage ;;
     *)          die "Unknown command '$1'. Run './scripts/dev.sh help'." ;;
 esac

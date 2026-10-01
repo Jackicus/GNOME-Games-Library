@@ -4,7 +4,7 @@ DEV := ./scripts/dev.sh
 NESTED := ./scripts/nested.sh
 
 .PHONY: all link install reload logs pack scan uninstall status stalls clean help \
-        nested nested-headless nested-stop nested-status preview lint
+        nested nested-headless nested-stop nested-status preview lint check
 
 all: install
 
@@ -14,6 +14,11 @@ link install reload logs pack scan uninstall status stalls clean:
 # gjs.guide's ESLint rules over the GJS code (eslint.config.mjs).
 lint: node_modules
 	@npx --no-install eslint .
+
+# Everything that needs no GNOME Shell, display or network; CI runs it
+# (.github/workflows/ci.yml) and main requires it.
+check: lint
+	@$(DEV) check
 
 node_modules: package.json
 	npm install --no-audit --no-fund

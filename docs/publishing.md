@@ -65,9 +65,10 @@ What is left out, and why it is safe to leave out:
   GNOME 44 onward compiles the schema on install rather than expecting it in
   the zip (`extensionDownloader.js` runs `glib-compile-schemas --strict` after
   unzipping an EGO download).
-- **`__pycache__/`, `*.pyc`** — stripped by `strip_pycache`.
-- **`CLAUDE.md`** (root and `src/backend/`) — stripped by `strip_unshipped`.
-- **`scripts/`, `README.md`, `docs/`, `.claude/`, `.git`, `dist/`** — never
+- **`__pycache__/`, `*.pyc`** — stripped by `strip_unshipped` (its
+  `strip_pycache`).
+- **`src/backend/CLAUDE.md`** — stripped by `strip_unshipped`.
+- **`scripts/`, `README.md`, `CLAUDE.md`, `docs/`, `.claude/`, `.git`, `dist/`** — never
   part of `src/`, so never seen by the packer at all; `--extra-source` only
   reaches directories under the packed tree.
 
@@ -159,9 +160,9 @@ explains what could look like a bug. Worth saying:
 - API keys are stored in GSettings (dconf) in plain text;
 - Play starts a Steam game through Steam and a PS2 disc through PCSX2, and
   neither is included;
-- game controllers are read through libmanette, when it is installed, and only
-  while the library is on screen. The exception is the Guide button, which
-  opens it.
+- game controllers are read through libmanette, when it is installed, and
+  acted on only while the library is on screen. The exception is the Guide
+  button, which opens it.
 
 Multi-paragraph descriptions use `\n` literals, and `*` makes a bullet list
 (review guidelines, `metadata.json` table).
@@ -194,9 +195,10 @@ be cleared or freed in disable()" literally could ask about them.
 - cancels the file monitor on `library.json`;
 - removes the rebuild timer;
 - calls `_teardown()`. The browser's `disable()` destroys the grids or the
-  modal panel and the button beside Show Apps, takes back the wrappers on the
-  overview layout and on Dash to Panel, and drops its overview connections.
-  The `DetailDialog` is popped down and destroyed;
+  modal panel, takes back the wrapper on the overview layout, and drops its
+  overview connections. The `DetailDialog` is popped down and destroyed;
+- calls `LibraryButton.detach()`: the button beside Show Apps comes out of the
+  dash, and the wrapper on Dash to Panel is taken back;
 - calls `Controls.disable()`: settings, pads, repeat timers and the virtual
   keyboard.
 
@@ -422,8 +424,8 @@ warning where the key is typed. Two smaller points:
   the shipped preferences, or make it a file chooser.
 
 **Input.** `Controls` reads every game controller through libmanette. It acts on
-one only while the library is on screen, except for Guide, and never while a
-modal grab is up. It also creates a Clutter virtual keyboard
+one only while the library is on screen, except for Guide, which opens it only
+when no window has the focus and no modal grab is up. It also creates a Clutter virtual keyboard
 (`create_virtual_device`), which it uses to replay the arrow keys, Enter and
 Escape for a remote or a pad while the library holds the keyboard. Synthesised
 input draws a reviewer's eye. The header of `controls.js` explains it, and the
@@ -451,9 +453,8 @@ small changes settle it:
 "Extensions which serve no purpose or have no functionality will also be
 rejected." On a fresh install, this extension shows nothing at all. No
 `library.json` exists until Rescan is pressed in the preferences. A library with
-no games gets no button (the `MediaMenu` and `LibraryWindow` constructors
-filter empty sections out), and with no button the shortcut does nothing
-either. A reviewer's virtual machine is unlikely to have Steam or PCSX2 with
+no games gets no button (`GamesLibraryApp._build()` detaches it), and the
+shortcut opens a browser with nothing in it. A reviewer's virtual machine is unlikely to have Steam or PCSX2 with
 games in it. So even after Rescan they see no change, and may report it as
 doing nothing.
 
@@ -612,10 +613,10 @@ detail pop-up for a PS2 disc at minimum, and the Games preferences page.
 
 ### Don't include unnecessary files: meets
 
-The zip holds what runs: the entry points, `lib/`, the stylesheet, the schema
-and `backend/`. Bytecode and notes are stripped. `make pack` does not check the
-contents, though, so a stray file would ship
-([Building the zip](#building-the-zip)).
+The zip holds what runs: the entry points, `lib/`, `backend/`, `icons/`, the
+stylesheet, the schema and `LICENSE`. Bytecode and notes are stripped, and
+`make pack`'s `check_pack` fails on any file missing from the zip or in it that
+should not be ([Building the zip](#building-the-zip)).
 
 ### Use a linter: meets
 
@@ -656,8 +657,8 @@ shipped `src/extension.js` is a plain, static `import` of `lib/app.js`, with
 synchronous `enable()`/`disable()` and no try/catch — see [Avoid interfering
 with the extension system](#avoid-interfering-with-the-extension-system-meets)
 above, [private-api.md](private-api.md#not-shell-internals-staging-lib) for how
-the dev entry point stages `lib/`, and CLAUDE.md's "How it fits together" for
-the full mechanism.
+the dev entry point stages `lib/`, and the comment at the top of
+`scripts/dev-extension.js` for the full mechanism.
 
 Because the two entry points differ, test the shipped one from an installed
 zip, not from the development link

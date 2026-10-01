@@ -4,13 +4,15 @@ argument-hint: "[optional: what to click through first, e.g. 'open the library' 
 allowed-tools: Bash(./scripts/nested.sh:*), Bash(make nested:*), Read
 ---
 
-Show what Games Library currently looks like, using the `drive-extension` skill. The
-user is watching the mirror window, so narrate with `say` before each step.
+Show what Games Library currently looks like, using the kit's `gnome-ext:nested-shell`
+skill and this repository's `drive-extension` skill. The user is watching the mirror
+window, so narrate with `say` before each step.
 
 Requested: $ARGUMENTS
 
-1. `./scripts/nested.sh start` (reuses one if already running; opens the mirror
-   window on the desktop; Games Library is ACTIVE when it returns).
+1. `./scripts/nested.sh start --clean` (reuses one if already running; opens the
+   mirror window on the desktop; Games Library is ACTIVE when it returns). A plain
+   `start` only when the question is how it sits beside the user's other extensions.
 2. In **one** `./scripts/nested.sh do …` call: `say` and `click` through to anything
    requested above — the library opens from its button beside Show Apps, so wrap
    an overview walkthrough in `overview on` … `overview off` — then `shot` into

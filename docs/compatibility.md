@@ -327,12 +327,14 @@ The Rescan button runs `python3 <extension>/backend/scan_library.py
 
 ## GNOME 51
 
-As written, 51 gets an extension that says it is on and shows nothing.
+As written, 51 gets an extension that fails to enable.
 
 1. `Clutter.get_default_backend()` is gone. `Controls.enable()` throws on the
    first line of `GamesLibraryApp.enable()`, so there is no button, no shortcut
-   and no controller. The journal says
-   `Failed to load lib/app.js: TypeError: ...`. The replacement,
+   and no controller. The throw reaches the shell, which shows the extension
+   as errored with the `TypeError`; under `make link` the dev entry point
+   catches it instead, logs `Failed to load lib/app.js: TypeError: ...` and
+   leaves the extension on with nothing on screen. The replacement,
    `global.stage.context.get_backend()`, already works on 48 to 50.
 2. `global.focus_manager.navigate_from_event()` is gone. With the first fixed,
    any key that reaches a panel's `vfunc_key_press_event()` without being a
@@ -394,13 +396,14 @@ Dash to Panel 74 claims 51. Blur my Shell 72 does not.
    link and deletes what is in `src/`. `make uninstall` removes only the
    directory of links. `make link` puts it back afterwards. See also
    [publishing.md](publishing.md#testing-the-zip-before-uploading).
-5. `make logs '10 min ago'` should be silent through enable, use and disable —
+5. `./scripts/dev.sh logs '10 min ago'` should be silent through enable, use and disable —
    the shipped extension logs only failures — with no `TypeError`, `Failed to
    load lib/app.js`, `The overview is not laid out as expected` or `No button
    beside Show Apps`. Testing through `make link` instead logs `Enabled from`
    on success, from `scripts/dev-extension.js`.
 6. Press Rescan in the preferences. The count updates, the journal says
-   `Rebuilt`, and a library that was up comes back up.
+   `Rebuilt` (under `make link`; an install logs only failures), and a
+   library that was up comes back up.
 7. **The menu library.** Press the button on the desktop: the overview opens
    on the games. Press it again, then open it again and press Escape: each
    lands on the desktop. From the window picker, the button goes to the games
@@ -431,8 +434,8 @@ Dash to Panel 74 claims 51. Blur my Shell 72 does not.
 15. Show in Files opens the game's folder. Play really launches the game, so
     test it last, with "Play on a new workspace" on and off.
 16. Lock and unlock the screen with the library up, and with nothing up. After
-    the unlock the button is back, and the `Enabled from` line names the same
-    stage directory as before the lock.
+    the unlock the button is back, and under `make link` the `Enabled from`
+    line names the same stage directory as before the lock.
 17. Change `columns`, `corner-radius`, "Library opens in" and "Games open in"
     with the library up. It rebuilds and stays up.
 18. Disable and enable ten times. Then check that no button is left beside Show

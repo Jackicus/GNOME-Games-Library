@@ -3,12 +3,15 @@ description: Apply src/ edits to the running GNOME Shell and check for errors
 allowed-tools: Bash(make reload), Bash(./scripts/dev.sh reload), Bash(./scripts/dev.sh logs:*)
 ---
 
-Apply the current `src/` edits to the running shell, then confirm they took.
+Apply the current `src/` edits to the user's running shell, then confirm they took.
+This acts on the real session, so run it only when the user asks for it (this command
+is that request); to try a change, use the nested shell (`/preview`).
 
 1. Run `make reload`.
 2. Run `./scripts/dev.sh logs "1 min ago"` to see what the shell logged.
-3. Report whether it came up clean. A healthy reload logs a single line:
-   `[Games Library] Enabled from /run/user/1000/games-library/lib-<stamp>`.
+3. Report whether it came up clean. Under `make link` a healthy reload logs a single
+   line, `[Games Library] Enabled from /run/user/1000/games-library/lib-<stamp>`; an
+   install (`make install`) logs nothing on success.
    Anything with `Failed to load`, `Error during disable`, or a JS stack trace is a
    real failure — quote it and say which file it points at.
 
