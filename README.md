@@ -1,54 +1,36 @@
-<div align="center">
-
 # Games Library
 
-**Your installed games, in a library of their own beside Show Apps.**
+Your Steam and PlayStation 2 games as a library beside Show Apps: in the overview, or in
+a panel that pops out of its button. A GNOME Shell extension.
 
-Every Steam game on every drive, and the PS2 discs PCSX2 knows about, in one
-library with proper cover art.<br>
-It opens in the overview next to your apps, and **Play** starts the game the
-way its launcher would.
+![The Games library in the overview: two rows of six game covers where the app grid would be, with the Games button lit beside Show Apps in the dash](docs/screenshots/library.jpg)
 
-![GNOME Shell 50](https://img.shields.io/badge/GNOME_Shell-50-4a86cf?logo=gnome&logoColor=white)
-
-![The Games library in the overview: two rows of six game covers where the app grid would be, with the Games button beside Show Apps in the dash](docs/screenshots/library.jpg)
-<sub>The library in the overview, opened from the **Games** button beside Show Apps.</sub>
-
-</div>
-
-**It does not run games itself.** There is no emulator or launcher in here. A
-Steam game is started through Steam (`steam://rungameid/…`, so your launch
-options, Proton version and overlay all still apply), and a PS2 disc is handed
-to PCSX2. Think of it as a good-looking front door to launchers you already
-use.
+It does not run games itself. A Steam game is started through Steam
+(`steam://rungameid/…`, so your launch options, Proton version and overlay still apply),
+and a PS2 disc is handed to PCSX2. It is a front door to the launchers you already use:
+it does not install, move or remove anything.
 
 ## What it does
 
-- **Finds your games on its own.** Steam's own library files are read,
-  including libraries on other drives, and PS2 discs come from wherever
-  `PCSX2.ini` points. Nothing to configure.
-- **Finds the artwork for you.** Steam games get Valve's own library art and
-  store description; PS2 discs use PCSX2's covers, or IGDB's with a free key.
-  Everything is cached locally and pre-scaled, so browsing stays instant.
-- **Built out of GNOME, not on top of it.** The grid *is* the shell's app grid
-  — same paging, same swipe, same keyboard, same hover and focus rings — and a
-  game opens the way an app folder does. It follows your accent colour, your
-  font size and your theme, because it uses the shell's own widgets rather
-  than imitating them.
-- **Made for the couch.** A game controller, a media remote, or any keys you
-  choose can drive it, and the Guide button opens it from the desktop.
-- **Nothing to leave running.** No daemon, no tray icon, no window. It draws
-  when you look at it and costs nothing when you don't.
-
-It is not a launcher, an emulator or a store; it won't install, move or
-uninstall anything; and the only things it downloads are artwork and
-descriptions.
+- **Finds your games.** Steam's own library files are read, libraries on other drives
+  included, and PS2 discs come from the folders `PCSX2.ini` points at. Both are found
+  without any setup.
+- **Fetches the artwork.** Steam games get Valve's library art and store description;
+  PS2 discs get PCSX2's own covers, or IGDB's with a free key of your own. Everything is
+  cached on your machine, already scaled, so browsing never waits on the network.
+- **Uses the shell's own app grid.** Same paging, swipe, keyboard, hover and focus rings
+  as your apps, and a picked game opens the way an app folder does. It follows your
+  accent colour and theme.
+- **Works from the couch.** A game controller, a media remote or keys you choose can
+  drive it, and the Guide button opens it from the desktop.
+- **Leaves nothing running.** No daemon, no tray icon, no window: it draws when you open
+  it.
 
 ## A game
 
-Pick a cover and it zooms out into a panel, the way an app folder opens: the
-artwork, **Play** and **Show in Files** on one side; the platform, year,
-rating, playtime, genres, description and where it lives on the other.
+Pick a cover and a panel zooms out of it, the way an app folder opens: the artwork, with
+**Play** and **Show in Files** under it, and beside it the platform, year, rating,
+playtime, genres, description and where the game is on disk.
 
 <table>
   <tr>
@@ -56,10 +38,10 @@ rating, playtime, genres, description and where it lives on the other.
     <td width="50%"><img src="docs/screenshots/game-ps2.jpg" alt="A PlayStation 2 disc popped up: its cover with Play and Show in Files beneath; beside it the title, chips for PlayStation 2, 2002, a rating of 8.5 and Role-playing, a description, and a Details list with the disc image (a CHD, with its size) and its serial"></td>
   </tr>
   <tr>
-    <td valign="top"><b>Steam</b>: Valve's own art and store description, and
-    the playtime Steam has recorded.</td>
-    <td valign="top"><b>PlayStation 2</b>: PCSX2's cover or IGDB's, the disc
-    image and its serial.</td>
+    <td valign="top"><b>Steam</b>: Valve's art and store description, and the playtime
+    Steam has recorded.</td>
+    <td valign="top"><b>PlayStation 2</b>: PCSX2's cover or IGDB's, the disc image and
+    its serial.</td>
   </tr>
 </table>
 
@@ -67,45 +49,95 @@ rating, playtime, genres, description and where it lives on the other.
 
 <img src="docs/screenshots/modal.jpg" alt="The library as a panel over the overview: a rounded panel headed Games, 18 in your library, holding the same two rows of covers">
 
-Set **Library opens in** to **Modal** and the Games button pops the library out
-as a panel instead, exactly as an app folder pops out of its icon. Where a
-picked game opens is a separate setting, so any mix of the two works:
+Set **Library opens in** to **Modal** and the Games button pops the library out as a
+panel, as an app folder pops out of its icon. Where a picked game opens is a separate
+setting, so any mix of the two works:
 
 | | Library opens in | Games open in |
 |---|---|---|
-| **Menu** | The overview, next to your apps | A pop-up that zooms out of the cover, the way an app folder does |
-| **Modal** | A panel that pops out of the Games button | A pop-up over everything, until you dismiss it |
+| **Menu** (default) | The overview, in place of the app grid | A pop-up that zooms out of the cover |
+| **Modal** | A panel that pops out of the Games button | A pop-up over everything, until you close it |
 
-**Play on a new workspace** (on by default) starts each game on an empty
-workspace of its own, leaving the one you picked it from as it was.
+**Play on a new workspace** (on by default) starts each game on an empty workspace of its
+own, leaving the one you picked it from as it was.
 
-## Preferences
+## Artwork sources
 
-<table>
-  <tr>
-    <td width="33%"><img src="docs/screenshots/prefs-general.png" alt="The General page: where the library and games open, Play on a new workspace, the keyboard shortcut, and the Appearance group with rows and columns"></td>
-    <td width="33%"><img src="docs/screenshots/prefs-controls.png" alt="The Controls page: each action — up, down, left, right, select, back, home, previous and next page — with the remote keys bound to it and buttons to add or clear them"></td>
-    <td width="33%"><img src="docs/screenshots/prefs-games.png" alt="The Games page: the Steam library and PCSX2 configuration rows, both auto-detected; the information sources, Steam and IGDB, with the switch to fetch online; and the Rescan button"></td>
-  </tr>
-  <tr>
-    <td valign="top"><b>General</b>: where things open, a keyboard shortcut,
-    and the look — rows, columns, corner radius, pop-up size.</td>
-    <td valign="top"><b>Controls</b>: remote keys and controller buttons for
-    each action.</td>
-    <td valign="top"><b>Games</b>: where Steam and PCSX2 are, where artwork
-    comes from, and Rescan.</td>
-  </tr>
-</table>
+Artwork and descriptions come from third-party services, fetched only when the library is
+scanned:
 
-Colour comes from your system accent, and text sizes follow Settings →
-Accessibility → Large Text.
+| Games | Source | Key needed? |
+|---|---|---|
+| Steam | Steam's store API and artwork CDN, or the art the Steam client has already cached | No |
+| PlayStation 2 | PCSX2's own covers folder, then IGDB | Only for IGDB |
+
+IGDB is run by Twitch. To use it, register a free application at
+[dev.twitch.tv](https://dev.twitch.tv/console/apps) (Applications › Register) and put its
+client ID and secret on the **Games** page of the preferences. The key is yours: the
+extension ships none. A second IGDB key can be added as a fallback. Without a key, a PS2
+disc that PCSX2 has no cover for gets a drawn placeholder.
+
+**Fetch artwork and descriptions online** on the same page turns the network off: a scan
+then uses only what is already cached.
+
+## Controllers and remotes
+
+The **Controls** page binds each action (the four directions, Select, Back, Home, and a
+page each way) to keys and to controller buttons. The arrow keys, Enter and Escape always
+work. A remote's OK, Back and Channel keys are bound by default, and a pad's D-pad, left
+stick, A, B and bumpers. Controller input is acted on only while the library is on
+screen, except Guide, which opens it when no window has the keyboard. Controllers are
+read through libmanette.
+
+## Alongside other extensions
+
+Games Library keeps to its own button, settings and cache, and is built to sit beside
+docks, Dash to Panel, Blur my Shell and other extensions that put a button beside Show
+Apps. With Dash to Panel, its button is in Dash to Panel's panel. If another extension's
+grid is up in the overview when you press **Games**, the overview closes and reopens on
+your games rather than drawing one grid over the other. On a controller, Guide opens Games
+Library and Menu is left free for anything else.
+
+## Requirements
+
+- GNOME Shell 50.
+- Python 3, for the scanner, with PyGObject (GNOME's `gi` module) or
+  [Pillow](https://python-pillow.org/) to scale the artwork; with neither, every game
+  gets a drawn cover.
+- Steam, PCSX2 or both. Either can be the Flatpak.
+- libmanette, for game controllers (optional; most GNOME desktops have it).
+
+## Privacy and network
+
+- **What it reads:** Steam's library files, including each Steam account's
+  `localconfig.vdf` for playtime, and PCSX2's `PCSX2.ini` and covers folder. None of this
+  leaves your machine.
+- **What it sends, and where:** only during a scan, only with **Fetch artwork and
+  descriptions online** on, and only for games not already in the cache:
+  - for each Steam game, its app ID to `store.steampowered.com` (the store record) and to
+    `cdn.cloudflare.steamstatic.com` (the artwork the Steam client has not cached);
+  - for each PS2 disc with no PCSX2 cover, when an IGDB key is set: your
+    client ID and secret to `id.twitch.tv` for a token, the disc's title to
+    `api.igdb.com`, and requests for its images to `images.igdb.com`.
+
+  No Steam login is used, and nothing is sent when the library is only opened.
+- **What it stores:** the library and the artwork in `~/.cache/games-library/`, and the
+  settings in dconf under `/org/gnome/shell/extensions/games-library/`. **The IGDB client
+  ID and secret are stored in dconf in plain text**, readable by any program running as
+  you.
+- **Importing a key:** if `keys/IGDB/CLIENT ID.txt` and `CLIENT SECRET.txt` exist in
+  your Documents folder, the key fields get an **Import** button that reads them.
+  Nothing is read until you press it.
+- **To remove what it stored:** `rm -r ~/.cache/games-library` and
+  `dconf reset -f /org/gnome/shell/extensions/games-library/` (this clears the keys too).
+
+The descriptions, ratings and artwork belong to their publishers and to Valve and IGDB;
+they are fetched for your own library and kept only in your cache.
 
 ## Install
 
-It isn't on extensions.gnome.org yet, so install it from source. You need GNOME
-Shell 50, `make`, and Python 3 for the scanner. Nothing else: the
-scanner uses the image libraries GNOME already ships, or
-[Pillow](https://python-pillow.org/) if you have it.
+It is not on extensions.gnome.org yet. From source, with `make` and
+`glib-compile-schemas` (part of GLib):
 
 ```bash
 git clone https://github.com/Jackicus/GNOME-Games-Library.git
@@ -113,98 +145,88 @@ cd GNOME-Games-Library
 make install
 ```
 
-GNOME Shell only looks for new extensions when you log in. Log out, log back
-in, then turn it on:
+Log out and back in (a Wayland session cannot load an extension it has never seen), then:
 
 ```bash
 gnome-extensions enable games-library@jackicus
 ```
 
-Then open the preferences (`gnome-extensions prefs games-library@jackicus`) and press
-**Rescan** on the **Games** page. The first scan takes a while, since it looks
-every game up online; after that it only fetches what it hasn't seen. A
-**Games** button appears beside Show Apps — in the overview's dash, or in Dash
-to Panel's panel if you use it.
+Then open the preferences and press **Rescan** on the **Games** page. The first scan takes
+a while, since it looks every game up online; later scans fetch only what they have not
+seen. The **Games** button appears beside Show Apps once the library has a game in it.
 
-To update, run `git pull && make install`, then log out and back in. To remove
-it, run `make uninstall`.
+To update: `git pull && make install`, then log out and back in. To remove:
+`make uninstall`.
 
-> [!NOTE]
-> It has been run on GNOME Shell 50. 48 and 49 are claimed from reading the
-> shell's own sources, not from running them. See
-> [docs/compatibility.md](docs/compatibility.md).
+## Preferences
 
-## Artwork sources
+`gnome-extensions prefs games-library@jackicus` opens them.
 
-| Games | Source | Key needed? |
-|---|---|---|
-| Steam | Steam's store and artwork CDN | No |
-| PlayStation 2 | PCSX2's own covers, then IGDB | Only for IGDB |
-
-IGDB needs a free Twitch developer application —
-[dev.twitch.tv](https://dev.twitch.tv/console/apps) → Applications → Register —
-whose client ID and secret go on the Games page. Without one, a PS2 disc with no
-PCSX2 cover gets a drawn placeholder.
-
-> [!IMPORTANT]
-> Keys are stored in dconf in plain text, like any other GNOME setting. Treat
-> them the way you'd treat any other credential on your machine.
-
-## Controllers and remotes
-
-The **Controls** page binds each action — the four directions, Select, Back,
-Home and a page each way — to keys and to controller buttons. Xbox,
-PlayStation and most other pads work as they are, and the Guide button opens
-the library whenever no window has the keyboard. Controller input is only acted
-on while the library is on screen, so your games are left alone. It uses
-libmanette, which most GNOME desktops already have.
-
-## Alongside other extensions
-
-Games Library keeps to its own button, settings and cache, so it sits happily
-beside docks, Dash to Panel, Blur my Shell, and other extensions that put a
-button beside Show Apps. If another extension's grid is up in the overview when
-you press **Games**, the overview closes and reopens on your games rather than
-drawing one grid over the other. On a controller, Guide opens Games Library and
-Menu is left free for anything else.
+<table>
+  <tr>
+    <td width="33%"><img src="docs/screenshots/prefs-general.png" alt="The General page: where the library and games open, Play on a new workspace, the keyboard shortcut, and the Appearance group with rows and columns"></td>
+    <td width="33%"><img src="docs/screenshots/prefs-controls.png" alt="The Controls page: each action, up, down, left, right, select, back, home, previous and next page, with the remote keys bound to it and buttons to add or clear them"></td>
+    <td width="33%"><img src="docs/screenshots/prefs-games.png" alt="The Games page: the Steam library and PCSX2 configuration rows, both auto-detected; the information sources, Steam and IGDB, with the switch to fetch online; and the Rescan button"></td>
+  </tr>
+  <tr>
+    <td valign="top"><b>General</b>: where the library and games open, a keyboard
+    shortcut (none by default), and the look: rows, columns, alignment, corner radius
+    and pop-up size.</td>
+    <td valign="top"><b>Controls</b>: remote keys and controller inputs for each
+    action, and whether controllers are read at all.</td>
+    <td valign="top"><b>Games</b>: where Steam and PCSX2 are, where artwork comes from
+    and the keys for it, and Rescan.</td>
+  </tr>
+</table>
 
 ## Troubleshooting
 
-| Command | Does |
-|---|---|
-| `make status` | What's installed, whether it's enabled, how big the library is |
-| `make scan` | Re-index your games and fetch artwork, as Rescan does |
-| `make logs` | Follow the shell journal, filtered to this extension |
+The extension logs its failures to the system journal with the prefix
+`[Games Library]`. Follow it while you reproduce a problem:
 
-Something looks wrong? `make logs` first — a GNOME extension's errors go to the
-system journal, never to a terminal.
+```bash
+journalctl -f -o cat /usr/bin/gnome-shell | grep -i 'games library'
+```
+
+The preferences window, and the scan its **Rescan** button runs, log in their own
+process:
+
+```bash
+journalctl -f -o cat SYSLOG_IDENTIFIER=org.gnome.Shell.Extensions
+```
+
+From a clone, `make status` says whether it is installed and enabled and how many games
+the library holds, and `make logs` follows the shell's journal filtered to it.
+
+- **No Games button:** the library is empty. Press **Rescan**, and check the Steam and
+  PCSX2 rows on the Games page point at the right folders.
+- **Rescan says "Failed — see logs":** the second command above shows why.
+- **A PS2 disc has no Play button:** PCSX2 itself was not found.
+- **A PS2 disc has a drawn cover:** PCSX2 has no cover for it and no IGDB key is set, or
+  IGDB did not find it.
+- **A Steam game has no description:** Steam's store refused the lookup (it limits bursts
+  of requests). The game keeps its artwork; to try again, delete
+  `~/.cache/games-library/metadata/index.json` and Rescan.
+- **The grid or the button is missing after a GNOME update:** the extension reaches into
+  parts of the shell that can change between versions;
+  [docs/private-api.md](docs/private-api.md) lists them.
 
 ## Development
 
-```bash
-make link      # install as a link to src/, so edits are live
-make reload    # apply your edits to the running shell, no logout needed
-make nested    # start a throwaway nested GNOME Shell, mirrored in a window
-make pack      # build dist/games-library@jackicus.shell-extension.zip
-```
-
-Edits to `extension.js` or `metadata.json` still need a log out and back in.
-`make check` runs the checks CI runs: ESLint, the schema, and the scanner.
-`CLAUDE.md` and `.claude/rules/` are the design notes: how the pieces fit
-together, which shell internals are used and why, and the traps that bite.
-[`docs/`](docs/) covers the private API the extension depends on,
-compatibility, and publishing.
-
-The screenshots are of a made-up library (`scripts/demo_library.py`): the games
-and their artwork are invented, drawn by that script, and taken in a nested
-shell with `./scripts/nested.sh start --clean --demo`.
+`make link` installs it as a link to `src/`, `make reload` loads your edits, and
+`make check` runs what CI runs. [CONTRIBUTING.md](CONTRIBUTING.md) has the rest.
+[`docs/`](docs/) covers the private shell API it depends on, compatibility with other
+GNOME versions, and publishing.
 
 ## Licence
 
 GPL-2.0-or-later. See [LICENSE](LICENSE).
 
----
+## Credits
 
-<sub>Steam is a trademark of Valve Corporation, and PlayStation of Sony
-Interactive Entertainment. This project is not affiliated with either, nor with
-PCSX2 or IGDB.</sub>
+The games and artwork in the screenshots are invented, drawn by
+`scripts/demo_library.py`; none of them are real.
+
+Steam is a trademark of Valve Corporation, and PlayStation of Sony Interactive
+Entertainment. This project is not affiliated with or endorsed by Valve, Sony, PCSX2,
+IGDB or Twitch.
