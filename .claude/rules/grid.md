@@ -43,11 +43,6 @@ until a navigation key asks; then Tab and the arrows move, Enter opens, Escape b
   is read from the overview's own state adjustment (`_stateAdjustment`), never timed: a
   fade of our own falls out of step with the shell's transition, and one started as the
   overview unmaps stalls until it is next shown.
-- **"Is the app grid up?" is `dash.showAppsButton.checked`, never `appDisplay.visible`.**
-  The shell holds the app display visible for the whole slide down to the window picker
-  and does not update it once the transition is dropped, so a view read from it outlived
-  the grid. The button's checked state is set as the grid opens and cleared on every way
-  out (Escape, a swipe, a search, leaving the overview).
 - **The overview is laid out in the work area, not the monitor.** The box
   `ControlsManagerLayout.vfunc_allocate` divides is already inset by the top bar and
   anything reserved (Dash to Panel's panel, 48 px of it), so `_slotSize` (a press before
@@ -68,10 +63,6 @@ panel through the `_updateGroupedElements` wrapper and is re-attached on its
 
 ## Lists and hover
 
-- **A scroll view's `St.Adjustment` is already disposed when its `destroy` fires**:
-  disconnecting from it there throws. The adjustment's handlers die with it;
-  `lazyList.js` takes back only its idle source.
-- **Hover on a tile is crossing events, not `track_hover`.** The `hover` pseudo-class
-  restyles a widget and all its children on every enter and leave. Only the widgets that
-  paint from `:hover` (the rows) track it, and no rule keys a descendant off a parent's
-  `:hover`.
+- On destroy, `lazyList.js` takes back only its idle source: the scroll view's
+  adjustment is gone by then.
+- Only the rows track hover; tiles hover by crossing events.
