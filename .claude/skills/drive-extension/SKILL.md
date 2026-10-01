@@ -14,7 +14,8 @@ to Games Library.
 - `./scripts/nested.sh start --clean --demo`: `--clean` plus the made-up library of
   `scripts/demo_library.py` (invented games, artwork drawn on the spot, every folder under
   `/demo`, Play running `true`) through the nested session's `XDG_CACHE_HOME`. It needs
-  Pillow (`python-pillow`). A shell already running is reused as it is, so `stop` first.
+  Pillow (`python-pillow`). A shell already running is reused as it is, so `stop` first;
+  `status` says which it is (`settings:` its own or shared, `library:` made-up or yours).
 - `overview on` is a flag as well as a command: it marks the overview wanted and only
   then shows it if it is not up, so `do "overview on" "shot $S/x.png"` also photographs
   an overview the **library button** opened, where a bare `shot` would dismiss it.
