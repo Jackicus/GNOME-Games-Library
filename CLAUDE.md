@@ -167,7 +167,7 @@ What keeps them from breaking each other; keep it true.
 
 - **Play is a real launch**, from the nested shell too: `xdg-open steam://…` reaches the
   user's Steam. **Rescan runs the scanner with `--from-settings`**: real keys, online.
-  Never press either to test.
+  Never press either to test; `/scan` is that same scan, run only when the user asks.
 - **The shares idle out, and one can be offline.** On the main desktop, `/media/LENOVO`
   and `/media/HP-AIO` are systemd automounts with a 60 s idle timeout; an offline
   share blocks every toucher for its connect timeout (11 s measured there). A PS2
@@ -195,5 +195,6 @@ Arch container. `make pack` (needs `gnome-extensions`) builds the zip and `check
 fails on any file missing from it or that should not ship.
 
 Seeing a change is the nested shell: `.claude/skills/drive-extension/SKILL.md` for its
-coordinates, `--demo`, the virtual pad and what must never be pressed. Screenshots in
-`docs/screenshots/` are of `./scripts/nested.sh start --clean --demo` only.
+coordinates, `--demo`, the virtual pad and what must never be pressed. `/reload`, `/logs`,
+`/status` and `/preview` use it; `make reload` is the user's own session, theirs to run.
+Screenshots in `docs/screenshots/` are of `./scripts/nested.sh start --clean --demo` only.
