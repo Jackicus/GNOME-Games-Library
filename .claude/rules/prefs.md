@@ -19,4 +19,5 @@ paths:
 - **Rescan** runs `backend/scan_library.py --from-settings`: the real keys, online. Never
   press it to test.
 - **No synchronous I/O on a game's folder**: a PS2 disc folder can sit on an idled-out
-  share, and a stat there kept the window from opening for 11 s. `query_info_async`.
+  share, and a stat there kept the window from opening for 11 s (on the main desktop).
+  `query_info_async`.
