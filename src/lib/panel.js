@@ -1,29 +1,6 @@
-// The panel the shell opens an app folder in, with the folder taken out of it.
-//
-// This is the shell's AppFolderDialog (appDisplay.js) — the shade, the panel
-// that zooms out of the icon it was opened from, the grab, the click-away,
-// the settle — with the folder's grid and its name entry removed.
-// What goes inside is the subclass's: the detail pane (detailDialog.js) or the
-// modal library's grid (libraryWindow.js). The shape and shade are the
-// shell's own `app-folder-dialog` style, so the panel is the folder's; its
-// corners follow `corner-radius` as every rounded surface here does.
-//
-// Two things the folder has no need of are options here. `dieWithSource` is
-// the folder's own behaviour — the panel goes the moment the icon it came out
-// of unmaps — which the "modal" detail turns off, since it is meant to
-// outlive the overview that was up when the pick was made. And a panel can be
-// opened with no source at all, which fades it in centred (`_fadeIn`) rather
-// than zooming it out of a tile that is not there.
-//
-// `inset` is the frame the panel keeps around whatever it holds, as a folder's
-// panel frames its grid; `_sizePanel` adds it back to what it measures inside.
-//
-// What goes *behind* the panel is the folder's too, and it is asked rather
-// than assumed — see `folderLook` below.
-//
-// Sizing is in two halves: `_budget()` is the room the work area leaves, and
-// `_sizePanel()` — the subclass's — is what it makes of it. Whatever it sets
-// is the panel's size at rest, which `_settle` restores.
+// The panel an app folder opens in, with the folder taken out: shade, zoom out of
+// the source, grab and click-away. Adapted from GNOME Shell's AppFolderDialog
+// (js/ui/appDisplay.js).
 
 import Atk from 'gi://Atk';
 import Clutter from 'gi://Clutter';
@@ -41,35 +18,17 @@ import {Duration, Ease, POP_SCALE, easeProps, rectIn} from './anim.js';
 import {NAVIGATION_KEYS, handleBoundKey} from './controls.js';
 import {radiusStyle} from './shape.js';
 
-// Between the panel and the edges of the work area, and the size it will not
-// grow past however much room there is. A folder's panel is 720px square; this
-// is one poster wider, and no taller. All three are logical pixels, multiplied
-// by the scale factor where they meet an allocation.
+// Logical pixels. A folder's panel is 720 px square; this is one poster wider.
 const MARGIN = 48;
 const MAX_WIDTH = 1180;
 const MAX_HEIGHT = 760;
-// The shade behind the panel: the shell's DIALOG_SHADE_NORMAL, not exported.
+// The shell's DIALOG_SHADE_NORMAL, not exported.
 const SHADE = new Cogl.Color({red: 0, green: 0, blue: 0, alpha: 204});
 const CLEAR = new Cogl.Color({red: 0, green: 0, blue: 0, alpha: 0});
-// Our copy of a folder's blur, when its folders have one (folderLook).
 const BLUR = 'games-library-panel-blur';
 
-// What this desktop puts behind and around an open folder. Stock GNOME
-// shades to DIALOG_SHADE_NORMAL and draws the panel from its theme, and so
-// does a panel of ours; but an extension can take that over — Blur my Shell
-// drops the shade and blurs the background instead, and restyles the panel
-// itself translucent by putting a class of its own on the folder's box — and
-// a panel that went on shading at 80% black behind an opaque box would read
-// as a different kind of thing entirely beside the folders it is modelled on.
-// So a folder is asked, once per open: whatever blur its dialog carries is
-// matched here in place of the shade, and whatever classes its box wears
-// beyond the theme's are put on ours, so the same stylesheet paints both. None
-// of it is ours to compute: with the extension off the folder carries neither,
-// and with no folders on the desktop there is nothing to ask, so the shell's
-// own shade and panel stand.
-//
-// Private shell API, of a piece with the rest in this extension: the app
-// display's folder icons, the dialog each of them keeps and its `_viewBox`.
+// Blur my Shell swaps a folder's shade for a blur and adds a class to its box; a
+// folder is asked so ours matches. See docs/design.md.
 function folderLook() {
     const icons = Main.overview._overview?.controls?._appDisplay?._folderIcons ?? [];
     for (const icon of icons) {
@@ -104,8 +63,7 @@ export const MediaPanel = GObject.registerClass({
             accessible_name: accessibleName,
         });
 
-        // The monitor the panel is shown on is picked per open, so the
-        // constraint is held rather than pinned to the primary.
+        // Its index is picked per open.
         this._constraint = new Layout.MonitorConstraint({index: Main.layoutManager.primaryIndex});
         this.add_constraint(this._constraint);
 
@@ -123,16 +81,13 @@ export const MediaPanel = GObject.registerClass({
             x_align: Clutter.ActorAlign.CENTER,
             y_align: Clutter.ActorAlign.CENTER,
             orientation: Clutter.Orientation.VERTICAL,
-            // A frame of its own replaces the theme's `0 1px`; St scales a CSS
-            // length itself, so the inset goes in unmultiplied. Without one
-            // the theme's padding stands.
+            // St scales a CSS length itself, so the inset goes in unmultiplied.
             style: inset
                 ? `${radiusStyle('pane')} padding: ${inset}px;` : radiusStyle('pane'),
         });
         this._panel.set_pivot_point(0, 0);
 
-        // The container is the monitor; its padding is what the work area
-        // leaves out, so the panel is centred in the work area (_budget).
+        // The container fills the monitor and is padded to the work area (_budget).
         this.child = new St.Bin({
             child: this._panel,
             x_align: Clutter.ActorAlign.FILL,
@@ -148,20 +103,14 @@ export const MediaPanel = GObject.registerClass({
         this._source = null;
         this._isOpen = false;
         this._needsZoomAndFade = false;
-        // The look this desktop's folders have instead of the theme's, if any:
-        // their blur in place of the shade, their classes on the box — and
-        // the timeline easing our copy of it.
         this._blur = null;
         this._classes = [];
         this._blurTimeline = null;
-        // How far ahead of the zoom the panel's own closing move leaves it,
-        // for the tile that is waiting to come back. The subclass sets it.
+        // Set by the subclass: how far its closing move leads the zoom home.
         this._closingLead = 0;
-        // The size the panel has at rest, set by `_sizePanel`.
         this._restSize = [320, 320];
 
-        // The tile goes as the panel comes, and comes back as it goes, as a
-        // folder's icon does.
+        // The tile hides while the panel is up, as a folder's icon does.
         this.connect('open-state-changed', (_panel, isOpen) => {
             const source = this._source;
             if (!source)
@@ -175,9 +124,7 @@ export const MediaPanel = GObject.registerClass({
             });
         });
 
-        // Whatever inside held the keyboard can be destroyed under it — a
-        // list, as its tab is switched — and Clutter then drops key focus to
-        // the stage; while the panel is up it is the panel's.
+        // A focused child destroyed drops key focus to the stage; take it back.
         global.stage.connectObject('notify::key-focus', () => {
             if (this._isOpen && !global.stage.get_key_focus())
                 this.grab_key_focus();
@@ -186,10 +133,7 @@ export const MediaPanel = GObject.registerClass({
         this.connect('destroy', () => this._onDestroy());
     }
 
-    // A click on the shade, outside the panel, closes it. Clutter.ClickGesture
-    // is 49 and later; on 48 this is the shell's own AppFolderDialog click
-    // action (48.0's `appDisplay.js`). Chosen once,
-    // here, so nothing else in the extension has to know the difference.
+    // A click on the shade, outside the panel, closes it.
     _addClickAway() {
         if (Clutter.ClickGesture) {
             const clickGesture = new Clutter.ClickGesture();
@@ -230,40 +174,31 @@ export const MediaPanel = GObject.registerClass({
         global.focus_manager.remove_group(this);
     }
 
-    // The artwork the panel comes out of and goes back into, not the tile with
-    // its label around it. A source that is nothing but its artwork is used
-    // whole, which is how a section button serves as one.
+    // The artwork, not the tile with its label.
     _sourceArt(source = this._source) {
         return source?.artwork ?? source;
     }
 
-    // The frame the panel keeps around its content, in physical pixels: what
-    // `_sizePanel` has to add back to whatever it measures inside.
+    // Physical pixels.
     get _framePx() {
         return this._inset * St.ThemeContext.get_for_stage(global.stage).scale_factor;
     }
 
-    // The panel is a fixed size, centred in the work area; the container fills
-    // the monitor, so the work area's insets become its padding. This is the
-    // room the panel has — what it makes of it is `_sizePanel`.
+    // The room the work area leaves; `_sizePanel` decides what to make of it.
     _budget() {
         const monitor = Main.layoutManager.monitors[this._constraint.index] ??
             Main.layoutManager.primaryMonitor;
         const area = Main.layoutManager.getWorkAreaForMonitor(monitor.index);
         const scale = St.ThemeContext.get_for_stage(global.stage).scale_factor;
-        // The insets are physical pixels and St scales a CSS length itself, so
-        // they go into the style divided rather than multiplied.
+        // Physical pixels into CSS, which St scales itself.
         const top = (area.y - monitor.y) / scale;
         const left = (area.x - monitor.x) / scale;
         const right = (monitor.x + monitor.width - area.x - area.width) / scale;
         const bottom = (monitor.y + monitor.height - area.y - area.height) / scale;
         this.child.set_style(`padding: ${top}px ${right}px ${bottom}px ${left}px;`);
 
-        // `_size` is the `detail-size` setting as a fraction: how much of the
-        // room available the panel fills. `maxHeight` is the whole of that
-        // room — the ceiling for a panel whose content will not fit inside
-        // the fraction, which is otherwise overhung and cut square (see
-        // detailDialog.js `_sizePanel`).
+        // `_size` is `detail-size`; `maxHeight` is the ceiling for content that does
+        // not fit the fraction.
         const room = {
             width: Math.min(MAX_WIDTH * scale, area.width - 2 * MARGIN * scale),
             height: Math.min(MAX_HEIGHT * scale, area.height - 2 * MARGIN * scale),
@@ -275,27 +210,20 @@ export const MediaPanel = GObject.registerClass({
         };
     }
 
-    // What the subclass makes of the budget: it sets `this._panel`'s size and
-    // records it in `this._restSize`.
+    // Sets `this._panel`'s size and records it in `this._restSize`.
     _sizePanel(_budget) {
         throw new GObject.NotImplementedError(`_sizePanel in ${this.constructor.name}`);
     }
 
-    // Landed, open and at rest. The detail dialog opens out onto its second
-    // column here; a plain panel has nothing more to do.
     _opened() {
     }
 
-    // How the panel leaves. The detail dialog narrows back to its artwork
-    // first; the default is the folder's own zoom home.
     _closeSequence() {
         this._zoomAndFadeOut();
     }
 
-    // The tile the panel comes out of and goes back into. It can be unmapped
-    // while the panel is up — the overview closing, the library's own panel
-    // closing under a pick made in it — which is the folder's cue to go at
-    // once, unless this panel is the "modal" detail and means to outlive it.
+    // An unmapped source closes the panel, as for a folder, unless `dieWithSource`
+    // is off (the modal detail outlives the overview).
     _setSource(source) {
         this._source?.disconnectObject(this);
         this._source = source;
@@ -311,10 +239,7 @@ export const MediaPanel = GObject.registerClass({
         }, this);
     }
 
-    // Behind the panel: the shade in and out, or the folder's blur in its
-    // place on a desktop whose folders use one. The effect is carried for as
-    // long as the panel is up and taken off again by `_settle`, so nothing
-    // blurs the stage while there is no panel over it.
+    // The blur is taken off again in `_settle`, so nothing blurs an empty stage.
     _easeBackdrop(on) {
         this._blurTimeline?.stop();
         this._blurTimeline = null;
@@ -358,9 +283,7 @@ export const MediaPanel = GObject.registerClass({
     }
 
     _zoomAndFadeIn() {
-        // The panel is at identity here — it has been allocated and nothing
-        // has transformed it yet — so its own box is the frame to read the
-        // artwork's rectangle in, and that rectangle is the translation.
+        // Untransformed yet, so the artwork's rectangle in it is the translation.
         const {x, y, width, height} = rectIn(this._sourceArt(), this._panel);
 
         this._panel.set({
@@ -413,8 +336,7 @@ export const MediaPanel = GObject.registerClass({
         this._needsZoomAndFade = false;
     }
 
-    // No tile to come out of: the panel arrives where it is, centred, the way
-    // the shell pops a window in — from just under full size, over the shade.
+    // No source: popped in centred, as the shell pops a window in.
     _fadeIn() {
         this._panel.set_pivot_point(0.5, 0.5);
         this._panel.set({scale_x: POP_SCALE, scale_y: POP_SCALE, opacity: 0});
@@ -440,7 +362,6 @@ export const MediaPanel = GObject.registerClass({
         });
     }
 
-    // At rest and out of sight, ready to come out of the next tile.
     _settle() {
         this.remove_all_transitions();
         this._blurTimeline?.stop();
@@ -475,10 +396,8 @@ export const MediaPanel = GObject.registerClass({
         if (global.focus_manager.navigate_from_event(event))
             return Clutter.EVENT_STOP;
 
-        // The panel holds the keyboard itself as it opens, and an arrow from
-        // the panel finds nothing beside it to move to — only Tab started the
-        // chain, which left a remote with nothing but arrows shut out. Any
-        // way in lands where Tab would, or where the subclass says.
+        // An arrow from the panel itself finds nothing to move to, which shut out a
+        // remote with only arrows.
         if (global.stage.get_key_focus() === this &&
             NAVIGATION_KEYS.includes(event.get_key_symbol()) && this._focusFirst())
             return Clutter.EVENT_STOP;
@@ -490,10 +409,8 @@ export const MediaPanel = GObject.registerClass({
         return this.navigate_focus(null, St.DirectionType.TAB_FORWARD, false);
     }
 
-    // Out of `source`, a tile or a button; centred on the current monitor when
-    // there is none. Hosted where the pick was made — over the overview when
-    // that is up, as a folder is, over everything else otherwise — unless the
-    // caller named a host of its own.
+    // Hosted over the overview when that is up, as a folder is, unless the caller
+    // named a host.
     popup(source = null) {
         if (this._isOpen)
             return;
@@ -538,8 +455,7 @@ export const MediaPanel = GObject.registerClass({
             this._source = null;
         }
 
-        // The budget is settled before anything is filled in: the subclass
-        // fills at that size (`_prepare`) and is then measured (`_sizePanel`).
+        // Filled at the budget (`_prepare`), then measured (`_sizePanel`).
         const budget = this._budget();
         this._prepare?.(budget);
         this._sizePanel(budget);

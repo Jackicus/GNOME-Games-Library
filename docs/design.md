@@ -40,3 +40,22 @@ asks for its artwork's shape and the layout places poster-shaped cells. A view b
 only the pages in reach of the one showing, since a library can run to thousands of
 items where an app grid holds dozens. The page dots are faded rather than hidden for a
 one-page library, which otherwise sat 7 px lower than a two-page one.
+
+## The pop-up panels
+
+`panel.js` is the shell's `AppFolderDialog` with the folder taken out: the shade, the
+zoom out of the tile, the grab and the click-away, styled `app-folder-dialog` so it
+follows the theme. The modal library and the detail pop-up subclass it.
+
+- **What goes behind it.** Blur my Shell swaps a folder's shade for a blur and puts a
+  class of its own on the folder's box. Once per open a folder's dialog is asked, and
+  its blur and classes go on ours, so the two look alike; with stock GNOME, or no
+  folders, the shell's shade and theme stand.
+- **Two moves.** A picked game zooms out of its tile at the width of the artwork alone
+  (poster-shaped, so the zoom is near uniform), then widens onto the title, facts and
+  details. The pane is laid out once at the open width inside a clip, so widening
+  reveals the second column rather than reflowing it every frame. Closing mirrors it.
+- **Nothing is built on an animating frame.** The second column is built on an idle
+  while the zoom runs, and the details list on a timer once the panel has landed.
+- **`modal`** hides the overview first, so the panel fades in centred, and it survives
+  its tile unmapping; `menu` goes with its tile, as a folder goes with its icon.

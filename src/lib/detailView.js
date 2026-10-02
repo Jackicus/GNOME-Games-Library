@@ -1,7 +1,5 @@
-// One game up close: artwork and primary action on the left, title, facts,
-// synopsis and the details list (install folder, playtime, serial) on the
-// right. It always sits inside the folder's panel (detailDialog.js), which is
-// the surface it is drawn on, so it draws no frame of its own.
+// A picked game: artwork and actions on the left, title, facts, synopsis and
+// details on the right. Drawn on the detail panel, so it has no frame of its own.
 
 import St from 'gi://St';
 import Clutter from 'gi://Clutter';
@@ -14,32 +12,18 @@ import {artworkStyle, createArtwork, createActionButton, createLabel, createPill
 import {PANE_INSET, radiusStyle} from './shape.js';
 import {adjustAnimationTime, ensureActorVisibleInScrollView} from 'resource:///org/gnome/shell/misc/animationUtils.js';
 
-// What the pane keeps around its content; the stylesheet carries the same
-// number. Sizes are worked out here rather than read back off an allocation,
-// because the popup has to know how wide the side column will be before
-// anything is on screen.
-//
-// Everything below is logical pixels, as the stylesheet's are: each is
-// multiplied by the scale factor where it meets an allocation, and left alone
-// where it goes into a CSS string, which St scales itself.
-// The panel around the pane adds `shape.js` PANE_INSET on top of this: what
-// shows between the panel's edge and the artwork is the two together, 32.
+// Logical pixels. With PANE_INSET, 32 px between the panel's edge and the artwork;
+// the stylesheet's .gm-pane-content padding must agree.
 const PADDING = 32 - PANE_INSET;
 
-// The hero fills the pane's height, less its padding and the two action
-// buttons beneath it, up to this cap. It stops well short of a big screen:
-// the popup is a panel the size of a folder's, not the work area.
+// The pop-up is a folder-sized panel, not the work area.
 const HERO_MAX_HEIGHT = 560;
 const HERO_RESERVED = 2 * 52 + 28;         // two action buttons and the gaps
 const HERO_MAX_WIDTH_FRACTION = 0.34;      // of the pane width
-// The hero's floor on a small work area — see `_heroSize`.
 const HERO_MIN = 132;
-// 14px type at the stylesheet's line-height: 1.5.
+// 14 px type at the stylesheet's line-height of 1.5.
 const SUMMARY_LINE = 21;
 const SUMMARY_LINES = 5;
-// A game's details run to three rows, but the list is built the way every
-// list here is: a screenful first — the one that is staggered in — and the
-// rest as it scrolls.
 const FIRST_ROWS = 24;
 const ROWS_PER_BATCH = 16;
 
@@ -87,10 +71,7 @@ export class DetailView {
         }
     }
 
-    // What the pane keeps between its edge and its columns, in physical
-    // pixels — St has already scaled the stylesheet's copy of it. Public
-    // because the popup sizes its panel around the side column and has to add
-    // it back.
+    // Physical pixels, for the dialog to size its panel around the side column.
     get padding() {
         return PADDING * this._scale;
     }
@@ -99,25 +80,17 @@ export class DetailView {
         return St.ThemeContext.get_for_stage(global.stage).scale_factor;
     }
 
-    // Hero size for this screen: as tall as the pane allows, capped so the
-    // text column keeps its share of the width.
     _heroSize(aspect) {
         const scale = this._scale;
         const room = this._height - 2 * this.padding - HERO_RESERVED * scale;
         const byHeight = Math.min(HERO_MAX_HEIGHT * scale, room);
         const byWidth = Math.round(this._width * HERO_MAX_WIDTH_FRACTION * aspect);
-        // A small screen at the smallest `detail-size` leaves less room than
-        // the buttons under the artwork take, and the artwork would come out
-        // at nothing or below it. HERO_MIN is the floor; the panel grows
-        // around it, since it is sized from the column's own height.
+        // The panel grows around HERO_MIN rather than the artwork vanishing.
         const height = Math.max(HERO_MIN * scale, Math.min(byHeight, byWidth));
         return {width: Math.round(height / aspect), height};
     }
 
-    // `mainColumn` is when the second column — the title, the facts and the
-    // list — joins the first: 'auto' as soon as the frame it was built on is
-    // free, 'held' when whatever is opening the pane will call `revealMain()`
-    // itself (the popup does, as it starts to widen onto it).
+    // `mainColumn: 'held'` leaves the second column for `revealMain()`.
     populate(item, section, {mainColumn = 'auto'} = {}) {
         this._cancelDeferred();
         this.actor.destroy_all_children();
@@ -126,10 +99,6 @@ export class DetailView {
         this._listHost = null;
         this._main = null;
 
-        // The pane stacks an optional backdrop (the game's wide hero art,
-        // dimmed) beneath the two-column content, both clipped to the pane's
-        // corners — the panel's own curve less the frame it keeps, so the two
-        // stay concentric.
         const pane = new St.Widget({
             style_class: 'gm-pane',
             layout_manager: new Clutter.BinLayout(),
@@ -144,8 +113,7 @@ export class DetailView {
             const backdrop = new St.Widget({style_class: 'gm-backdrop', x_expand: true, y_expand: true});
             backdrop.set_style(artworkStyle(item.backdrop, 'paneInner'));
             pane.add_child(backdrop);
-            // A dark veil keeps the text readable over bright artwork.
-            pane.add_child(new St.Widget({
+                pane.add_child(new St.Widget({
                 style_class: 'gm-backdrop-veil',
                 x_expand: true,
                 y_expand: true,
@@ -159,9 +127,7 @@ export class DetailView {
         this.side = this._buildSide(item, section);
         columns.add_child(this.side);
 
-        // Only the artwork and its buttons are built now. The rest is built on
-        // the next idle, off the frames of the zoom that is opening the pane,
-        // and the list inside it later still, once the pane has landed.
+        // The second column is built off the zoom's frames, on an idle.
         this._buildPendingMain = () => this._buildMain(item);
         this._deferredMain = GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
             this._deferredMain = 0;
@@ -172,7 +138,6 @@ export class DetailView {
         });
     }
 
-    // Build the second column, hidden, if it is not there yet.
     _addMain() {
         if (!this._buildPendingMain)
             return;
@@ -187,21 +152,13 @@ export class DetailView {
         this._columns.add_child(this._main);
     }
 
-    // Fade the second column in — as the popup's panel opens out onto it, or
-    // on its own once built when the pane is already the width it will be.
-    // The list under it follows the fade rather than joining it: see _fillList.
     revealMain({delay = 0} = {}) {
         this._addMain();
         this._main?.ease({opacity: 255, delay, duration: Duration.NORMAL, mode: Ease.OUT});
         this._fillList(delay + Duration.NORMAL);
     }
 
-    // The first screenful of the list, once the pane has stopped moving. It is
-    // the one piece of building left that could be felt, so the zoom and the
-    // widen that opened the pane get every frame before this to themselves. A
-    // timer and not an idle: an idle falls in the middle of an animation,
-    // which is the whole of what this avoids. Whatever fills it afterwards is
-    // `lazyList` as it scrolls.
+    // A timer, not an idle: an idle lands mid-animation.
     _fillList(after) {
         if (this._deferredList || this._list || !this._listHost)
             return;
@@ -213,16 +170,12 @@ export class DetailView {
             });
     }
 
-    // And back out, as the panel closes back down to its artwork.
     hideMain({duration = Duration.FAST} = {}) {
         this._main?.ease({opacity: 0, duration, mode: Ease.OUT});
     }
 
-    // Left: artwork, Play, and the install folder.
     _buildSide(item, section) {
-        // x_expand is set explicitly to false: Clutter otherwise treats a parent
-        // as expanding when any descendant expands (the buttons do), and the
-        // side column would swallow half of the free width.
+        // Clutter would otherwise expand it for its expanding buttons.
         const side = new St.BoxLayout({orientation: Clutter.Orientation.VERTICAL, style_class: 'gm-detail-side', x_expand: false, y_expand: true});
 
         const {width: heroW, height: heroH} = this._heroSize(section.aspect);
@@ -237,7 +190,6 @@ export class DetailView {
         });
         side.add_child(this.hero);
 
-        // A PS2 disc with no PCSX2 to boot it has nothing to launch.
         if (item.playPath) {
             const play = createActionButton({
                 label: item.playLabel,
@@ -262,7 +214,6 @@ export class DetailView {
         return side;
     }
 
-    // Right: title, facts, synopsis, details.
     _buildMain(item) {
         const main = new St.BoxLayout({orientation: Clutter.Orientation.VERTICAL, x_expand: true, y_expand: true, style_class: 'gm-detail-main'});
 
@@ -287,7 +238,7 @@ export class DetailView {
             summary.clutter_text.line_wrap = true;
             summary.clutter_text.line_wrap_mode = Pango.WrapMode.WORD_CHAR;
             summary.clutter_text.ellipsize = Pango.EllipsizeMode.END;
-            // Height bounds the text so Pango ellipsises the last visible line.
+            // A fixed height makes Pango ellipsise the last visible line.
             summary.height = SUMMARY_LINE * this._scale * SUMMARY_LINES;
             summary.y_expand = false;
             main.add_child(summary);
@@ -302,8 +253,6 @@ export class DetailView {
             clip_to_allocation: true,
         });
         main.add_child(this._listHost);
-        // The list itself is `revealMain`'s to start, once the pane has
-        // landed (_fillList).
         return main;
     }
 
@@ -337,14 +286,11 @@ export class DetailView {
                     icon: entry.icon,
                     onActivate: () => this._onOpen(entry.path),
                 });
-                // Keyboard focus has to drag the view after it, or a Tab past
-                // the fold never scrolls and so never tops the list up.
+                // A Tab past the fold has to scroll, or the list is never topped up.
                 row.connect('key-focus-in', () => ensureActorVisibleInScrollView(scroll, row));
                 batch.push(row);
                 box.add_child(row);
             }
-            // Only the arriving screenful is staggered; the rest are appended
-            // below the fold, where an animation would go unseen.
             if (first)
                 staggerIn(batch, {step: 12, cap: 160, fromY: 8});
             first = false;
