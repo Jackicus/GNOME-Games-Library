@@ -1,15 +1,5 @@
-// Motion vocabulary derived from GNOME Shell's own.
-//
-// The shell animates almost everything with ease-out-quad over 250ms (overview,
-// workspace switch, app grid pages) and pops windows in with ease-out-expo over
-// 150ms from 94% scale. The durations below (120/200) are the extension's own
-// steps, not shell constants -- they are tuned to feel of a piece with the
-// shell's 250ms/150ms rather than copied from them, so the same handful of
-// curves and durations is what makes the extension feel native rather than
-// "animated".
-//
-// actor.ease() is the shell's own helper: it honours the "enable animations"
-// setting and the slow-down factor, so nothing here needs to check them.
+// Durations and curves of a piece with the shell's (ease-out-quad 250 ms, windows
+// popping in with ease-out-expo 150 ms).
 
 import Clutter from 'gi://Clutter';
 
@@ -27,16 +17,11 @@ export const Ease = {
     IN: Clutter.AnimationMode.EASE_IN_QUAD,
 };
 
-// The scale the shell shrinks a window to while it fades in or out; a panel
-// with no tile to zoom out of arrives from it.
+// The scale a window pops in from.
 export const POP_SCALE = 0.94;
 
-// Ease plain numeric GObject properties on something that is not an actor —
-// a Clutter effect's, which `actor.ease()` cannot reach, since a transition
-// needs a ClutterAnimatable to live on. The one thing `ease()` would have
-// given us for free is the animations toggle and the slow-down factor, so
-// those are taken from the same place it takes them. Returns the timeline, to
-// stop if whatever is being eased goes first.
+// For a Clutter effect's properties, which `actor.ease()` cannot reach. Returns
+// the timeline, to stop if the effect goes first.
 export function easeProps(object, targets, {duration = Duration.NORMAL, mode = Ease.OUT, onComplete} = {}) {
     const time = adjustAnimationTime(duration);
     const entries = Object.entries(targets).map(([key, to]) => [key, object[key], to]);
@@ -45,8 +30,7 @@ export function easeProps(object, targets, {duration = Duration.NORMAL, mode = E
             object[key] = to;
         onComplete?.();
     };
-    // Animations off, or as good as: land on the spot rather than run a
-    // timeline nobody would see.
+    // Animations are off.
     if (time < 1) {
         land();
         return null;
@@ -70,9 +54,6 @@ export function easeProps(object, targets, {duration = Duration.NORMAL, mode = E
     return timeline;
 }
 
-// Reveal a list of actors one after another, the way the app grid settles.
-// The stagger is capped so a long list never feels slow; later items simply
-// arrive together.
 export function staggerIn(actors, {step = 12, cap = 150, fromY = 10, duration = Duration.NORMAL} = {}) {
     actors.forEach((actor, i) => {
         actor.remove_all_transitions();
@@ -88,23 +69,14 @@ export function staggerIn(actors, {step = 12, cap = 150, fromY = 10, duration = 
     });
 }
 
-// Resolve the styles of `actor` and everything under it, now.
-//
-// For measuring something before it has ever been shown. St computes a
-// theme node lazily, but the numbers a widget takes *out* of its node — an
-// St.BoxLayout's `spacing`, a margin — are only picked up when `style-changed`
-// is emitted on that widget, which is `ensure_style`'s job and which otherwise
-// happens no earlier than its first map. And `ensure_style` on a parent only
-// marks its children dirty, so the whole subtree has to be walked. Asked for
-// its preferred height without this, a freshly built column answers as if it
-// had no spacing and no margins at all.
+// Before a first map, a widget's own spacing and margins are not picked up, and
+// `ensure_style` on a parent does not reach its children.
 export function ensureStyleDeep(actor) {
     actor.ensure_style?.();
     for (const child of actor.get_children())
         ensureStyleDeep(child);
 }
 
-// The rectangle an actor paints into, relative to `ancestor`.
 export function rectIn(actor, ancestor) {
     const [ax, ay] = ancestor.get_transformed_position();
     const [x, y] = actor.get_transformed_position();
