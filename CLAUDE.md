@@ -190,7 +190,7 @@ and Dash to Panel methods, and read the same pads. What keeps them apart; keep i
 
 `make check` needs no shell: `make lint`, then `./scripts/dev.sh check`: the schema with
 `--strict` (dry run), `scanner` (`EXT_CHECKS`: the Python byte-compiled, the scanner
-`--offline` in a scratch `HOME`), then `size` (budget 5300: today's size, provisional).
+`--offline` in a scratch `HOME`), then `size` (budget 4200: the size after the simplify pass, rounded up).
 `make pack` packs exactly what `EXT_SHIP` names and fails on any file missing or extra. A
 pushed `v*` tag is a release (`.github/workflows/release.yml`).
 

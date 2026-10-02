@@ -2,7 +2,6 @@
 // variables, so each rounded surface takes it inline; the stylesheet's values are
 // fallbacks.
 
-const MAX = 40;
 const DEFAULT_RADIUS = 18;
 
 // The shell's $base_padding, in logical pixels for a CSS string.
@@ -21,13 +20,12 @@ const PART = {
 let styles = {};
 
 export function setCornerRadius(px) {
-    const base = Math.max(0, Math.min(MAX, Math.round(px) || 0));
     styles = {};
     for (const [part, scale] of Object.entries(PART))
-        styles[part] = `border-radius: ${Math.max(0, scale(base))}px;`;
+        styles[part] = `border-radius: ${scale(px)}px;`;
 }
 setCornerRadius(DEFAULT_RADIUS);
 
 export function radiusStyle(part = 'art') {
-    return styles[part] ?? styles.art;
+    return styles[part];
 }

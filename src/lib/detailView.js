@@ -90,8 +90,8 @@ export class DetailView {
         return {width: Math.round(height / aspect), height};
     }
 
-    // `mainColumn: 'held'` leaves the second column for `revealMain()`.
-    populate(item, section, {mainColumn = 'auto'} = {}) {
+    // The second column waits for `revealMain()`.
+    populate(item, section) {
         this._cancelDeferred();
         this.actor.destroy_all_children();
         this.item = item;
@@ -132,8 +132,6 @@ export class DetailView {
         this._deferredMain = GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
             this._deferredMain = 0;
             this._addMain();
-            if (mainColumn === 'auto')
-                this.revealMain();
             return GLib.SOURCE_REMOVE;
         });
     }
@@ -170,8 +168,8 @@ export class DetailView {
             });
     }
 
-    hideMain({duration = Duration.FAST} = {}) {
-        this._main?.ease({opacity: 0, duration, mode: Ease.OUT});
+    hideMain() {
+        this._main?.ease({opacity: 0, duration: Duration.FAST, mode: Ease.OUT});
     }
 
     _buildSide(item, section) {
@@ -192,7 +190,7 @@ export class DetailView {
 
         if (item.playPath) {
             const play = createActionButton({
-                label: item.playLabel,
+                label: 'Play',
                 icon: 'media-playback-start-symbolic',
             });
             play.set_x_expand(true);
@@ -244,7 +242,7 @@ export class DetailView {
             main.add_child(summary);
         }
 
-        main.add_child(new St.Label({text: item.details.name, style_class: 'gm-group-heading'}));
+        main.add_child(new St.Label({text: 'Details', style_class: 'gm-group-heading'}));
 
         this._listHost = new St.Widget({
             layout_manager: new Clutter.BinLayout(),

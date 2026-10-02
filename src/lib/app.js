@@ -137,10 +137,6 @@ export class GamesLibraryApp {
         });
     }
 
-    _libraryMode() {
-        return this._settings.get_string('library-opens-in');
-    }
-
     _detailMode() {
         return this._settings.get_string('detail-opens-in');
     }
@@ -156,12 +152,12 @@ export class GamesLibraryApp {
             this._button.detach();
 
         this._dialog = new DetailDialog({
-            onOpen: path => this._open(path),
+            onOpen: path => openPath(path, () => this._launching()),
             size: this._settings.get_int('detail-size') / 100,
             mode: this._detailMode(),
         });
 
-        const Browser = this._libraryMode() === 'modal' ? LibraryWindow : MediaMenu;
+        const Browser = this._settings.get_string('library-opens-in') === 'modal' ? LibraryWindow : MediaMenu;
         this._browser = new Browser({
             sections: SECTIONS,
             itemsFor: key => this._sections[key] ?? [],
@@ -205,10 +201,6 @@ export class GamesLibraryApp {
         if (global.display.focus_window || Main.modalCount > 0)
             return;
         this._browser.open();
-    }
-
-    _open(path) {
-        openPath(path, () => this._launching());
     }
 
     // The pop-up's grab would hold the game's window off. A new window maps on the

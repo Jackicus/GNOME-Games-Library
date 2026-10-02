@@ -86,18 +86,6 @@ export function createActionButton({label, icon, styleClass = 'button default gm
     });
 }
 
-export function createTitles(title = '', subtitle = '') {
-    const actor = new St.BoxLayout({
-        orientation: Clutter.Orientation.VERTICAL,
-        style_class: 'gm-header-titles',
-        y_align: Clutter.ActorAlign.CENTER,
-    });
-    const titleLabel = new St.Label({style_class: 'gm-header-title', text: title});
-    const subtitleLabel = new St.Label({style_class: 'gm-header-subtitle', text: subtitle});
-    actor.add_child(titleLabel);
-    actor.add_child(subtitleLabel);
-    return {actor, titleLabel, subtitleLabel};
-}
 
 // `styleClass` is required: there is no bare pill rule.
 export function createPill(text, styleClass, style = null) {

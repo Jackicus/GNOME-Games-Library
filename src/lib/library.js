@@ -165,7 +165,6 @@ function normalizeGame(game, art) {
         ? game.launch : null;
     return {
         id: game.id ?? game.title,
-        kind: 'games',
         title: game.title,
         subtitle: platform,
         year: game.year ?? null,
@@ -176,8 +175,7 @@ function normalizeGame(game, art) {
         backdrop: exists(game.backdrop_path, art) ? game.backdrop_path : null,
         folder,
         countLabel: played,
-        details: {name: 'Details', entries},
+        details: {entries},
         playPath: launch,
-        playLabel: 'Play',
     };
 }

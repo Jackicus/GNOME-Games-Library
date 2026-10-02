@@ -53,14 +53,13 @@ export const MediaPanel = GObject.registerClass({
         'open-state-changed': {param_types: [GObject.TYPE_BOOLEAN]},
     },
 }, class GamesLibraryPanel extends St.Bin {
-    constructor({host = null, dieWithSource = true, size = 1, inset = 0, accessibleName = ''} = {}) {
+    constructor({host = null, dieWithSource = true, size = 1, inset = 0} = {}) {
         super({
             visible: false,
             x_expand: true,
             y_expand: true,
             reactive: true,
             accessible_role: Atk.Role.PANEL,
-            accessible_name: accessibleName,
         });
 
         // Its index is picked per open.
@@ -147,6 +146,7 @@ export const MediaPanel = GObject.registerClass({
             return;
         }
 
+        // GNOME 48 (docs/compatibility.md).
         const clickAction = new Clutter.ClickAction();
         clickAction.connect('clicked', () => {
             const [x, y] = clickAction.get_coords();
@@ -208,11 +208,6 @@ export const MediaPanel = GObject.registerClass({
             height: Math.round(room.height * this._size),
             maxHeight: Math.round(room.height),
         };
-    }
-
-    // Sets `this._panel`'s size and records it in `this._restSize`.
-    _sizePanel(_budget) {
-        throw new GObject.NotImplementedError(`_sizePanel in ${this.constructor.name}`);
     }
 
     _prepare(_budget) {

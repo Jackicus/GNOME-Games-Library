@@ -52,7 +52,7 @@ class GamesLibraryDetailDialog extends MediaPanel {
     _prepare(budget) {
         const frame = 2 * this._framePx;
         this._detail.setSize(budget.width - frame, budget.height - frame);
-        this._detail.populate(this._item, this._section, {mainColumn: 'held'});
+        this._detail.populate(this._item, this._section);
     }
 
     // Closed, the panel is the side column: the artwork and the buttons under it.

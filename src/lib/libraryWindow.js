@@ -8,7 +8,6 @@ import St from 'gi://St';
 import {libraryCountLabel} from './library.js';
 import {createMediaView} from './mediaGrid.js';
 import {MediaPanel} from './panel.js';
-import {createTitles} from './widgets.js';
 
 const LibraryPanel = GObject.registerClass(
 class GamesLibraryLibraryPanel extends MediaPanel {
@@ -28,10 +27,16 @@ class GamesLibraryLibraryPanel extends MediaPanel {
             x_expand: true,
             y_align: Clutter.ActorAlign.CENTER,
         });
-        const titles = createTitles();
-        this._title = titles.titleLabel;
-        this._subtitle = titles.subtitleLabel;
-        this._header.add_child(titles.actor);
+        const titles = new St.BoxLayout({
+            orientation: Clutter.Orientation.VERTICAL,
+            style_class: 'gm-header-titles',
+            y_align: Clutter.ActorAlign.CENTER,
+        });
+        this._title = new St.Label({style_class: 'gm-header-title'});
+        this._subtitle = new St.Label({style_class: 'gm-header-subtitle'});
+        titles.add_child(this._title);
+        titles.add_child(this._subtitle);
+        this._header.add_child(titles);
         this._panel.add_child(this._header);
 
         this._stack = new St.Widget({
