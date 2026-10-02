@@ -9,16 +9,8 @@ import Pango from 'gi://Pango';
 import {SECTIONS as LIBRARY_SECTIONS, readSections} from './lib/library.js';
 import {ACTIONS, NATIVE_KEYS, padLabel} from './lib/actions.js';
 
-// Everything a source is, in one place: what it is called, what it is good
-// for, where its key comes from and which fields that key has.
-//
-// `fields` is what the credential is made of — two for IGDB's Twitch client
-// id/secret pair — and its order is the order they are joined by in the
-// `credentials` setting. A source with no `fields` needs no key, and still
-// gets a row of the same shape with the entry greyed out.
-//
-// `service` is the folder the key drop is read from (~/Documents/keys/IGDB/);
-// `file` is the file inside it.
+// `fields` are joined in this order in the `credentials` setting; a source with
+// none needs no key. `service` and `file` name the key drop, ~/Documents/keys/.
 const SOURCES = {
     steam: {
         title: 'Steam',
@@ -39,20 +31,8 @@ const SOURCES = {
     },
 };
 
-// The Games page, plus General and Controls.
-//
-// What the section *is* — its key, its GSettings prefix, its title, its icon
-// — is lib/library.js's SECTIONS, imported above, so it is said in one place.
-// What is added here is only what the preferences themselves need to say
-// about it.
-//
-// `sources` is what the Add menu offers, not what is used: the ordered list in
-// use is <prefix>-sources, and the same source may appear in it more than once
-// with a different key.
-//
-// Games are not a folder of media but two roots — Steam's library and PCSX2's
-// config folder, both auto-detected — so they are named in `paths` and get
-// one fixed row each.
+// What the preferences add to lib/library.js's SECTIONS. `sources` is what the
+// Add menu offers; the list in use is <prefix>-sources.
 const PAGES = {
     games: {
         lower: 'games', noun: 'games',
@@ -74,9 +54,7 @@ const PAGES = {
 
 const SECTIONS = LIBRARY_SECTIONS.map(section => ({...section, ...PAGES[section.key]}));
 
-// Where the system's own shortcuts are kept, for a new one to be checked
-// against: the window manager's, the shell's, mutter's and the media keys,
-// whose `custom-keybindings` also lists the ones made in GNOME Settings.
+// Checked for clashes; media-keys also lists the custom shortcuts.
 const SYSTEM_KEYBINDINGS = [
     'org.gnome.desktop.wm.keybindings',
     'org.gnome.shell.keybindings',
@@ -86,11 +64,9 @@ const SYSTEM_KEYBINDINGS = [
 ];
 const MEDIA_KEYS = 'org.gnome.settings-daemon.plugins.media-keys';
 const CUSTOM_KEYBINDING = 'org.gnome.settings-daemon.plugins.media-keys.custom-keybinding';
-// Libadwaita's from 1.8 (GNOME 49); GTK's, deprecated since, before that.
 const ShortcutLabel = Adw.ShortcutLabel ?? Gtk.ShortcutLabel;
 
-// What a remote's keys are called. GTK's table predates the keys xkbcommon
-// gives a remote's evdev codes (0x10081xxx) and shows those as numbers.
+// GTK shows a remote's evdev keys (0x10081xxx) as numbers.
 const REMOTE_KEYS = {
     0x10081160: 'OK',
     0x1008ffa0: 'Select',
@@ -102,8 +78,7 @@ const REMOTE_KEYS = {
     0x100811b6: 'Context Menu',
 };
 
-// Fields of a multi-field credential are joined by a tab: it cannot occur in
-// any of the keys, and it keeps the setting one flat a{ss}.
+// A tab occurs in no key, and keeps the setting a flat a{ss}.
 const FIELD_SEP = '\t';
 
 export default class GamesLibraryPreferences extends ExtensionPreferences {
@@ -124,11 +99,7 @@ export default class GamesLibraryPreferences extends ExtensionPreferences {
             window.add(this._sectionPage(state, section));
     }
 
-    // ------------------------------------------------------------------
-    // Credentials
-    // ------------------------------------------------------------------
-    // A slot id ("igdb@1") is one key; a second slot ("igdb@2") is a second
-    // key to fall back to.
+    // A slot ("igdb@1") is one key; "igdb@2" is a second to fall back to.
     _credentials(settings) {
         return settings.get_value('credentials').deep_unpack();
     }
@@ -146,8 +117,6 @@ export default class GamesLibraryPreferences extends ExtensionPreferences {
         settings.set_value('credentials', new GLib.Variant('a{ss}', all));
     }
 
-    // One credential split into the fields its source declares, padded so a
-    // half-filled pair still has a box for the missing half.
     _fields(settings, slot, count) {
         const parts = this._credential(settings, slot).split(FIELD_SEP);
         return Array.from({length: count}, (_, i) => parts[i] ?? '');
@@ -156,19 +125,15 @@ export default class GamesLibraryPreferences extends ExtensionPreferences {
     _setField(settings, slot, index, value, count) {
         const parts = this._fields(settings, slot, count);
         parts[index] = value;
-        // All-empty is no credential at all, so the slot goes rather than
-        // lingering as a row of tabs.
         this._setCredential(settings, slot, parts.some(Boolean) ? parts.join(FIELD_SEP) : '');
     }
 
-    // A slot is usable when every field its source declares is filled; a
-    // source whose slot is not usable is skipped by the scanner.
+    // The scanner skips a slot with any field empty.
     _credentialReady(settings, slot, count) {
         return this._fields(settings, slot, count).every(value => value.trim() !== '');
     }
 
-    // Slots no list names any more are keys nobody can reach, so removing the
-    // last row that used one removes the key with it.
+    // A slot no list names is unreachable, so its key goes with the last row.
     _pruneCredentials(settings) {
         const used = new Set();
         for (const section of SECTIONS) {
@@ -184,27 +149,18 @@ export default class GamesLibraryPreferences extends ExtensionPreferences {
         settings.set_value('credentials', new GLib.Variant('a{ss}', all));
     }
 
-    // ------------------------------------------------------------------
-    // General
-    // ------------------------------------------------------------------
     _generalPage(state) {
         const {settings} = state;
         const page = new Adw.PreferencesPage({title: 'General', icon_name: 'preferences-system-symbolic'});
 
-        // One way of browsing, and one way of opening what is picked, each
-        // chosen on its own.
         const view = new Adw.PreferencesGroup({title: 'View'});
         page.add(view);
 
-        // One vocabulary, offered twice: the same two places for the library
-        // and for a picked game, each read without reference to the other.
         const PLACES = [
             ['menu', 'Menu'],
             ['modal', 'Modal'],
         ];
         const toggles = () => {
-            // `can_shrink` off so a label is never ellipsized to fit the row; the
-            // two titles are kept short and parallel so both groups sit the same.
             const group = new Adw.ToggleGroup({valign: Gtk.Align.CENTER, homogeneous: true, can_shrink: false});
             for (const [name, label] of PLACES)
                 group.add(new Adw.Toggle({name, label}));
@@ -232,9 +188,7 @@ export default class GamesLibraryPreferences extends ExtensionPreferences {
         const appearance = new Adw.PreferencesGroup({title: 'Appearance'});
         page.add(appearance);
 
-        // A slider with a tick at the schema's own default, read from the
-        // schema rather than repeated here, so dragging back to the line is
-        // dragging back to the default.
+        // The tick is the schema's default.
         const slider = (key, min, max) => {
             const scale = new Gtk.Scale({
                 orientation: Gtk.Orientation.HORIZONTAL,
@@ -270,8 +224,6 @@ export default class GamesLibraryPreferences extends ExtensionPreferences {
         columnsRow.add_suffix(slider('columns', 4, 10));
         appearance.add(columnsRow);
 
-        // Where a row that is not full sits: centred under the full ones, as
-        // the app grid does, or against the leading edge.
         const align = new Adw.ToggleGroup({valign: Gtk.Align.CENTER, homogeneous: true, can_shrink: false});
         align.add(new Adw.Toggle({name: 'center', label: 'Centre'}));
         align.add(new Adw.Toggle({name: 'start', label: 'Left'}));
@@ -317,7 +269,6 @@ export default class GamesLibraryPreferences extends ExtensionPreferences {
                 modes.active_name = mode;
             if (details.active_name !== detail)
                 details.active_name = detail;
-            // Under the heading, not in the rows, where it would squeeze the toggles.
             view.description = `${VIEWS[mode] ?? ''} ${DETAILS[detail] ?? ''}`.trim();
         };
         for (const [group, key] of [[modes, 'library-opens-in'], [details, 'detail-opens-in']]) {
@@ -347,13 +298,7 @@ export default class GamesLibraryPreferences extends ExtensionPreferences {
         return page;
     }
 
-    // ------------------------------------------------------------------
-    // Shortcuts
-    // ------------------------------------------------------------------
-    // A row per section — the one, Games — set by pressing the shortcut, as
-    // GNOME Settings sets its own. The extension grabs whatever
-    // `<prefix>-shortcut` holds (lib/app.js) and follows it as it changes, so
-    // nothing is registered here — writing the setting is the whole of it.
+    // The extension grabs whatever `<prefix>-shortcut` holds and follows changes.
     _shortcutsGroup(state) {
         const {settings} = state;
         const group = new Adw.PreferencesGroup({
@@ -384,11 +329,8 @@ export default class GamesLibraryPreferences extends ExtensionPreferences {
         return group;
     }
 
-    // The shortcut: GNOME Settings' own rules (cc-keyboard-shortcut-editor.c)
-    // — Escape cancels, Backspace removes it, and a key with no modifier is
-    // only taken when it types nothing, a function key or a media key. What
-    // the system already answers to is refused, not taken over: this is the
-    // extension's setting, not the system's.
+    // GNOME Settings' rules (cc-keyboard-shortcut-editor.c). A key the system
+    // already answers to is refused, not taken over.
     _captureShortcut(state, section) {
         const {settings} = state;
         const key = `${section.prefix}-shortcut`;
@@ -417,13 +359,8 @@ export default class GamesLibraryPreferences extends ExtensionPreferences {
         });
     }
 
-    // The dialog GNOME Settings listens for a key in. `onKey` is handed each
-    // key pressed, lowered the way Settings lowers it (Shift kept only where
-    // it changed the key), and answers true to close, or a line saying why
-    // the key will not do. A modifier on its own is waited past; so, for a
-    // shortcut, is a bare arrow, Tab, Home, End or Page key, which GTK holds
-    // to be navigation — `anyKey` takes those too, since they are exactly
-    // what a remote or a Pico may send.
+    // `onKey` answers true to close, or a reason the key will not do. `anyKey`
+    // also takes the navigation keys GTK refuses bare, which a remote may send.
     _keyDialog(state, {heading = 'Set Shortcut', title, description, onKey, anyKey = false}) {
         const {window} = state;
         const status = new Adw.StatusPage({
@@ -452,14 +389,10 @@ export default class GamesLibraryPreferences extends ExtensionPreferences {
                 status.description = answer;
             return Gdk.EVENT_STOP;
         });
-        // On the dialog, not the window: a dialog's keys never pass through
-        // the window's capture phase.
+        // A dialog's keys never pass through the window's capture phase.
         dialog.add_controller(keys);
 
-        // As GNOME Settings does while it listens: a key the system has taken
-        // reaches the dialog instead of doing what it does, so it can be said
-        // to be taken. The shell asks once whether this app may; refused, a
-        // taken key goes on doing its own thing and only the rest are heard.
+        // As GNOME Settings does, so a taken key reaches the dialog to be refused.
         const surface = window.get_surface();
         surface?.inhibit_system_shortcuts?.(null);
         dialog.connect('closed', () => surface?.restore_system_shortcuts?.());
@@ -467,13 +400,6 @@ export default class GamesLibraryPreferences extends ExtensionPreferences {
         return dialog;
     }
 
-    // ------------------------------------------------------------------
-    // Controls
-    // ------------------------------------------------------------------
-    // What a remote, a controller or keys of the user's own do in the library
-    // (lib/controls.js). Every action is two lists, `keys-<action>` and
-    // `pad-<action>`; a row shows one, adds to it by pressing the thing to
-    // add, and empties it.
     _controlsPage(state) {
         const {settings} = state;
         const page = new Adw.PreferencesPage({title: 'Controls', icon_name: 'input-gaming-symbolic'});
@@ -508,8 +434,7 @@ export default class GamesLibraryPreferences extends ExtensionPreferences {
         for (const action of ACTIONS) {
             padRows.push(this._bindingRow(settings, action, {
                 key: `pad-${action.key}`,
-                // A mapped pad's D-pad is four buttons, an unmapped one's a
-                // hat, and both are bound, under the one name.
+                // A D-pad's buttons and hat share names, so duplicates go.
                 labels: () => [...new Set(settings.get_strv(`pad-${action.key}`).map(padLabel))],
                 subtitle: action.subtitle ?? null,
                 add: () => this._capturePad(state, action),
@@ -527,8 +452,6 @@ export default class GamesLibraryPreferences extends ExtensionPreferences {
         return page;
     }
 
-    // One action's list: what is in it, a button to add to it, and one to
-    // empty it. Rebuilt from the setting on every change.
     _bindingRow(settings, action, {key, labels, add, addTip, subtitle = action.subtitle ?? 'Besides the arrow key'}) {
         const row = new Adw.ActionRow({title: action.title});
         if (subtitle)
@@ -573,9 +496,6 @@ export default class GamesLibraryPreferences extends ExtensionPreferences {
         return row;
     }
 
-    // A key for `action`, pressed. It is added to the others, not in place of
-    // them; one the library already knows, one another action has, and one
-    // the system takes before the library can see it are refused.
     _captureNavKey(state, action) {
         const {settings} = state;
         const key = `keys-${action.key}`;
@@ -607,10 +527,8 @@ export default class GamesLibraryPreferences extends ExtensionPreferences {
         });
     }
 
-    // A controller input for `action`: the first button pressed, or stick
-    // or D-pad pushed, on any controller. A stick is only taken once it has
-    // been seen at rest, so one that was already over (a trigger resting at
-    // one end) is not mistaken for the press.
+    // A stick is taken only once seen at rest, so a trigger resting at one end is
+    // not mistaken for a press.
     async _capturePad(state, action) {
         const {settings, window} = state;
         const key = `pad-${action.key}`;
@@ -687,9 +605,7 @@ export default class GamesLibraryPreferences extends ExtensionPreferences {
         });
     }
 
-    // Which controllers libmanette can see, kept up to date while the window
-    // is open — the quickest way to tell a pad that is not being read from a
-    // binding that is wrong.
+    // The connected pads, so a pad not being read is not mistaken for a bad binding.
     async _watchPads(state, row) {
         const Manette = await loadManette();
         if (!Manette) {
@@ -717,9 +633,6 @@ export default class GamesLibraryPreferences extends ExtensionPreferences {
         sync();
     }
 
-    // ------------------------------------------------------------------
-    // The Games page
-    // ------------------------------------------------------------------
     _sectionPage(state, section) {
         const page = new Adw.PreferencesPage({title: section.title, icon_name: section.icon});
 
@@ -746,14 +659,7 @@ export default class GamesLibraryPreferences extends ExtensionPreferences {
         return page;
     }
 
-    // ------------------------------------------------------------------
-    // Sources
-    // ------------------------------------------------------------------
-    // The ordered list of where the games' artwork and facts come from, and
-    // the keys that go with them. Everything in it lives in two settings —
-    // <prefix>-sources for the order and `credentials` for the keys — so the
-    // rows are torn down and rebuilt from those rather than kept in step by
-    // hand.
+    // Rebuilt from <prefix>-sources and `credentials` rather than kept in step.
     _sourcesGroup(state, section) {
         const {settings} = state;
         const key = `${section.prefix}-sources`;
@@ -771,8 +677,6 @@ export default class GamesLibraryPreferences extends ExtensionPreferences {
         settings.bind(`${section.prefix}-online`, online, 'active', Gio.SettingsBindFlags.DEFAULT);
         group.add(online);
 
-        // The Add menu. An action group rather than a callback per item so the
-        // menu is a plain Gio.Menu and the popover comes from GTK.
         const actions = new Gio.SimpleActionGroup();
         const add = new Gio.SimpleAction({name: 'add', parameter_type: new GLib.VariantType('s')});
         add.connect('activate', (_action, param) => this._addSource(state, section, param.unpack()));
@@ -817,18 +721,13 @@ export default class GamesLibraryPreferences extends ExtensionPreferences {
         };
 
         settings.connect(`changed::${key}`, rebuild);
-        // A key imported or cleared elsewhere is refreshed rather than
-        // rebuilt, so an entry being typed into is not pulled out from under
-        // the cursor.
+        // Refreshed, not rebuilt, so an entry being typed in keeps the cursor.
         settings.connect('changed::credentials', () => syncers.forEach(sync => sync()));
         rebuild();
         return group;
     }
 
-    // One source: its name, what state its key is in, and — expanded — the key
-    // itself. The shape is the same whether or not it takes one; a source that
-    // needs no key shows the entry greyed out rather than hiding it, so the
-    // rows line up and nothing looks missing.
+    // A keyless source shows a greyed entry, so the rows line up.
     _sourceRow(state, section, entry, index, list) {
         const {settings} = state;
         const id = sourceId(entry);
@@ -896,8 +795,7 @@ export default class GamesLibraryPreferences extends ExtensionPreferences {
             help.connect('clicked', () => Gtk.show_uri(state.window, spec.help, Gdk.CURRENT_TIME));
         }
 
-        // An expander row packs each suffix ahead of the last, so they go on
-        // back to front to read help, sooner, later, remove from the left.
+        // An expander row packs suffixes back to front.
         for (const button of [remove, down, up, help]) {
             if (button)
                 row.add_suffix(button);
@@ -949,8 +847,6 @@ export default class GamesLibraryPreferences extends ExtensionPreferences {
             sync: () => {
                 const current = this._fields(settings, slot, fields.length);
                 entries.forEach((value, i) => {
-                    // Never over an entry being typed into: the edit in front
-                    // of the user beats the one that landed from elsewhere.
                     if (!value.has_focus && value.get_text() !== current[i])
                         value.set_text(current[i]);
                 });
@@ -959,8 +855,7 @@ export default class GamesLibraryPreferences extends ExtensionPreferences {
         };
     }
 
-    // Adding a source that takes a key picks the lowest slot not already in
-    // the list, so a second IGDB row is a second key to fall back to.
+    // A keyed source takes the lowest free slot.
     _addSource(state, section, id) {
         const {settings} = state;
         const key = `${section.prefix}-sources`;
@@ -974,12 +869,12 @@ export default class GamesLibraryPreferences extends ExtensionPreferences {
                 n++;
             entry = `${id}@${n}`;
         } else if (list.includes(id)) {
-            return;   // a keyless source twice would only ask the same server twice
+            return;
         }
         settings.set_strv(key, [...list, entry]);
     }
 
-    // The value in the key drop, or '' if it cannot be read. Never logged.
+    // The key itself is never logged.
     _readKeyDrop(path) {
         try {
             const [ok, bytes] = GLib.file_get_contents(path);
@@ -998,14 +893,7 @@ export default class GamesLibraryPreferences extends ExtensionPreferences {
         return GLib.file_test(path, GLib.FileTest.IS_REGULAR) ? path : null;
     }
 
-    // ------------------------------------------------------------------
-    // Folders
-    // ------------------------------------------------------------------
-    // Find out whether `path` is there and mark the row if not. The answer is
-    // never waited for: a folder on a share or an automount that has idled
-    // out takes as long to stat as the share takes to come back, and asked
-    // synchronously that is how long the window takes to open. `stillCurrent`
-    // says whether the row is still about this path when the answer lands.
+    // Async: a folder on an idled-out share blocks a stat for seconds.
     _checkFolder(row, path, stillCurrent) {
         const text = row.get_subtitle();
         Gio.File.new_for_path(path).query_info_async(
@@ -1039,8 +927,6 @@ export default class GamesLibraryPreferences extends ExtensionPreferences {
         });
     }
 
-    // One fixed root row: what it is set to, a chooser and a button back to
-    // auto-detection.
     _folderRow(state, section, spec) {
         const {settings} = state;
         const row = new Adw.ActionRow({title: spec.title, activatable: true});
@@ -1078,7 +964,6 @@ export default class GamesLibraryPreferences extends ExtensionPreferences {
         return row;
     }
 
-    // A root row: the setting, or the auto-detection hint when unset.
     _showFolder(row, settings, spec) {
         const path = settings.get_string(spec.key);
         row.set_subtitle(path || spec.hint);
@@ -1086,11 +971,6 @@ export default class GamesLibraryPreferences extends ExtensionPreferences {
             this._checkFolder(row, path, () => settings.get_string(spec.key) === path);
     }
 
-    // ------------------------------------------------------------------
-    // Helpers
-    // ------------------------------------------------------------------
-    // How many games the last scan found, read the same way the extension
-    // reads it.
     _readCounts() {
         const {sections, generated} = readSections();
         const counts = {generated};
@@ -1099,7 +979,6 @@ export default class GamesLibraryPreferences extends ExtensionPreferences {
         return counts;
     }
 
-    // "105 games · last scanned 25 Sep 14:02".
     _countText(counts, section) {
         const n = counts[section.key];
         if (n === null || n === undefined || !counts.generated)
@@ -1108,13 +987,7 @@ export default class GamesLibraryPreferences extends ExtensionPreferences {
         return `${n} ${section.noun} · last scanned ${when.format('%-d %b %H:%M')}`;
     }
 
-    // A button that runs backend/scan_library.py, then re-reads the count.
-    // The extension picks the new library up on its own.
-    //
-    // The scanner reads the roots, sources, credentials and the online
-    // switch out of GSettings itself, so nothing here has to turn a setting
-    // into a flag or hand it a key. Steam and PCSX2 are auto-detected, so
-    // there is always somewhere to look.
+    // The scanner reads its settings itself (--from-settings).
     _scanButton(state, onDone) {
         const content = new Adw.ButtonContent({label: 'Rescan', icon_name: 'view-refresh-symbolic'});
         const button = new Gtk.Button({child: content, valign: Gtk.Align.CENTER, css_classes: ['flat']});
@@ -1160,11 +1033,8 @@ export default class GamesLibraryPreferences extends ExtensionPreferences {
     }
 }
 
-// What already answers to `accel`, by the name its setting gives it, or null:
-// one of our own remote bindings, the system's own shortcuts, and the custom
-// ones made in GNOME Settings. Accelerators are compared as GTK parses them,
-// so "<Primary>" and "<Control>" are one modifier. `ownKey` is the shortcut
-// being set, which is not a clash with itself.
+// The name of what already answers to `accel`, or null. `ownKey` is the shortcut
+// being set.
 function shortcutClash(settings, accel, ownKey) {
     const normal = text => {
         const [ok, keyval, mods] = Gtk.accelerator_parse(text);
@@ -1178,8 +1048,7 @@ function shortcutClash(settings, accel, ownKey) {
         if (key !== ownKey && settings.get_strv(key).some(a => normal(a) === wanted))
             return `Open ${section.title}`;
     }
-    // A shortcut is grabbed everywhere, so it would swallow a remote's key
-    // before the library ever saw it.
+    // A shortcut would swallow a remote's key before the library saw it.
     for (const action of ACTIONS) {
         const pairs = settings.get_value(`keys-${action.key}`).deep_unpack();
         if (pairs.some(([keyval, mods]) => normal(Gtk.accelerator_name(keyval, mods)) === wanted))
@@ -1209,24 +1078,20 @@ function shortcutClash(settings, accel, ownKey) {
     return null;
 }
 
-// A key as the preferences show it: GTK's name for it, or ours for a remote's
-// keys, which GTK shows as numbers.
 function keyLabel(keyval, mods) {
     const named = REMOTE_KEYS[keyval];
     if (!named)
         return Gtk.accelerator_get_label(keyval, mods);
-    // The modifiers' half of the label, off a key GTK does know.
     return mods ? Gtk.accelerator_get_label(Gdk.KEY_a, mods).slice(0, -1) + named : named;
 }
 
-// libmanette, if it is installed; loaded once, when first wanted.
+// Null without libmanette.
 let manette = null;
 function loadManette() {
     manette ??= import('gi://Manette').then(module => module.default, () => null);
     return manette;
 }
 
-// "igdb@2" names the second IGDB key; "steam" names a source that has none.
 function sourceId(entry) {
     return entry.split('@')[0];
 }
