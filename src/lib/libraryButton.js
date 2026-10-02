@@ -67,7 +67,7 @@ export class LibraryButton {
     detach() {
         this._attached = false;
         Main.extensionManager.disconnectObject(this);
-        this._dashToPanel?.disconnectObject?.(this);
+        this._dashToPanel?.disconnectObject(this);
         this._dashToPanel = null;
         this._detach();
     }
@@ -80,7 +80,7 @@ export class LibraryButton {
 
     sync(checked) {
         this._checked = !!checked;
-        this._buttonHost?.sync?.();
+        this._buttonHost?.sync();
         if (this._button)
             this._button.toggleButton.checked = this._checked;
     }
@@ -89,9 +89,9 @@ export class LibraryButton {
         const dashToPanel = global.dashToPanel;
         if (!dashToPanel || dashToPanel === this._dashToPanel)
             return;
-        this._dashToPanel?.disconnectObject?.(this);
+        this._dashToPanel?.disconnectObject(this);
         this._dashToPanel = dashToPanel;
-        dashToPanel.connectObject?.('panels-created', () => this._reattach(), this);
+        dashToPanel.connectObject('panels-created', () => this._reattach(), this);
     }
 
     _reattach() {
@@ -106,7 +106,7 @@ export class LibraryButton {
         try {
             if (panel?.showAppsIconWrapper && panel.panel && panel._updateGroupedElements)
                 this._attachToPanel(panel);
-            else if (Main.overview.dash?._dashContainer)
+            else if (Main.overview.dash._dashContainer)
                 this._attachToDash(Main.overview.dash);
         } catch (e) {
             console.warn(`[Games Library] No button beside Show Apps: ${e}`);
@@ -132,18 +132,15 @@ export class LibraryButton {
     _attachToDash(dash) {
         const container = this._button = this._newButton();
         container.icon.setIconSize(dash.iconSize);
-        dash._hookUpLabel?.(container);
+        dash._hookUpLabel(container);
         dash._dashContainer.add_child(container);
         dash.connectObject('icon-size-changed',
             () => container.icon.setIconSize(dash.iconSize), this);
         this._buttonHost = {
+            sync: () => {},
             release: () => {
-                try {
-                    dash.disconnectObject(this);
-                    container.destroy();
-                } catch {
-                    // The dash is on its way out.
-                }
+                dash.disconnectObject(this);
+                container.destroy();
             },
         };
     }

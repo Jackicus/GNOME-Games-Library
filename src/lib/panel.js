@@ -215,6 +215,9 @@ export const MediaPanel = GObject.registerClass({
         throw new GObject.NotImplementedError(`_sizePanel in ${this.constructor.name}`);
     }
 
+    _prepare(_budget) {
+    }
+
     _opened() {
     }
 
@@ -457,7 +460,7 @@ export const MediaPanel = GObject.registerClass({
 
         // Filled at the budget (`_prepare`), then measured (`_sizePanel`).
         const budget = this._budget();
-        this._prepare?.(budget);
+        this._prepare(budget);
         this._sizePanel(budget);
 
         if (source) {

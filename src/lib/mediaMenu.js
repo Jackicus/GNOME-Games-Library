@@ -180,7 +180,7 @@ export class MediaMenu {
         // A transparent workspace still takes a poster's click.
         if (fold < 1) {
             workspaces.reactive = true;
-            workspaces.setPrimaryWorkspaceVisible?.(true);
+            workspaces.setPrimaryWorkspaceVisible(true);
         }
         workspaces.remove_transition('opacity');
         if (animate && workspaces.mapped && workspaces.opacity !== opacity) {
@@ -196,7 +196,7 @@ export class MediaMenu {
         workspaces.opacity = opacity;
         if (fold === 1) {
             workspaces.reactive = false;
-            workspaces.setPrimaryWorkspaceVisible?.(false);
+            workspaces.setPrimaryWorkspaceVisible(false);
         }
     }
 

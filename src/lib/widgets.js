@@ -151,6 +151,6 @@ export function createRow({index, title, subtitle, badges = [], size, icon, onAc
     }));
 
     row.set_child(content);
-    row.connect('clicked', () => onActivate?.());
+    row.connect('clicked', () => onActivate());
     return row;
 }

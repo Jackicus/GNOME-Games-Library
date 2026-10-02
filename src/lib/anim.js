@@ -2,6 +2,7 @@
 // popping in with ease-out-expo 150 ms).
 
 import Clutter from 'gi://Clutter';
+import St from 'gi://St';
 
 import {adjustAnimationTime} from 'resource:///org/gnome/shell/misc/animationUtils.js';
 
@@ -72,7 +73,8 @@ export function staggerIn(actors, {step = 12, cap = 150, fromY = 10, duration = 
 // Before a first map, a widget's own spacing and margins are not picked up, and
 // `ensure_style` on a parent does not reach its children.
 export function ensureStyleDeep(actor) {
-    actor.ensure_style?.();
+    if (actor instanceof St.Widget)
+        actor.ensure_style();
     for (const child of actor.get_children())
         ensureStyleDeep(child);
 }
