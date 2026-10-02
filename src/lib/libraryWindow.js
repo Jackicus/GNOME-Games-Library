@@ -1,21 +1,5 @@
-// The "modal" library: the games grid inside the folder's panel.
-//
-// The shell's own FolderView is a BaseAppView sitting in an AppFolderDialog
-// (appDisplay.js) — a grid of apps inside the panel that zoomed out of the
-// folder's icon. This is that shape with posters: `panel.js` is the panel,
-// `mediaGrid.js` the grid, and the icon it comes out of is the library's
-// button beside Show Apps (libraryButton.js). The button is the way in and
-// the panel is the whole view.
-//
-// Where it opens follows where its button is. On stock GNOME the dash lives in
-// the overview, so the panel opens over the overview and goes with it, exactly
-// as a folder does. With Dash to Panel the button is in the panel, on the
-// desktop, and so is the panel it opens. Escape, a click on the shade, or a
-// second press of the button closes it.
-//
-// The panel and the grid inside it are built the first time the library is
-// opened and kept for the panel's life, so opening it again is a matter of
-// showing them.
+// The "modal" library: the games grid in a folder-style panel that zooms out of
+// the button, as an app folder's FolderView does.
 
 import Clutter from 'gi://Clutter';
 import GObject from 'gi://GObject';
@@ -26,27 +10,19 @@ import {createMediaView} from './mediaGrid.js';
 import {MediaPanel} from './panel.js';
 import {createTitles} from './widgets.js';
 
-// The panel: the library's name and count over the grid, and nothing else —
-// the way back out is the button it came from, Escape, or a click away.
 const LibraryPanel = GObject.registerClass(
 class GamesLibraryLibraryPanel extends MediaPanel {
     constructor({columns, rows, onActivate}) {
-        // The folder's own behaviour: the panel goes when the button it came
-        // out of unmaps, which is what closes it with the overview.
+        // As a folder: it closes when the button unmaps with the overview.
         super({dieWithSource: true});
 
         this._columns = columns;
         this._rows = rows;
         this._onActivate = onActivate;
         this._view = null;
-        // The budget the view was built for. Not `_budget`, which is the
-        // host's method for working it out.
         this._room = null;
 
-        // A header of titles alone: the way out of this panel is Escape, the
-        // shade, or the button it came out of. The panel itself has no
-        // padding in the theme; a folder's name is inset by its container,
-        // so this takes that container's class and the same inset with it.
+        // The theme insets a folder's name by its container's class.
         this._header = new St.BoxLayout({
             style_class: 'gm-header folder-name-container',
             x_expand: true,
@@ -58,8 +34,6 @@ class GamesLibraryLibraryPanel extends MediaPanel {
         this._header.add_child(titles.actor);
         this._panel.add_child(this._header);
 
-        // The grid goes in here, built the first time the panel opens and
-        // kept for as long as the box it was built for.
         this._stack = new St.Widget({
             layout_manager: new Clutter.BinLayout(),
             x_expand: true,
@@ -68,25 +42,19 @@ class GamesLibraryLibraryPanel extends MediaPanel {
         this._panel.add_child(this._stack);
     }
 
-    // The panel takes the whole budget: a library wants every pixel the work
-    // area will give it. `set_size` is what overrides the 720px square the
-    // theme pins `.app-folder-dialog` to.
+    // `set_size` overrides the 720 px square the theme pins the dialog to.
     _sizePanel(budget) {
         this._panel.remove_all_transitions();
         this._panel.set_size(budget.width, budget.height);
         this._restSize = [budget.width, budget.height];
 
-        // A grid's rows, columns and cover size are worked out once, for the
-        // box it was given. Opened on a monitor that leaves a different box —
-        // or after the work area changed under us — the view is built again
-        // rather than stretched.
+        // The grid's shape is fixed when built, so a new box rebuilds it.
         if (this._room && (this._room.width !== budget.width || this._room.height !== budget.height))
             this._dropView();
         this._room = budget;
     }
 
-    // `section`'s library in the panel. Called from `open`, after `popup`, so
-    // the panel is on stage and its theme padding can be measured.
+    // Called after `popup`, once the theme padding can be measured.
     showSection(section, items) {
         this._title.text = section.title;
         this._subtitle.text = libraryCountLabel(items.length);
@@ -107,20 +75,14 @@ class GamesLibraryLibraryPanel extends MediaPanel {
         this._view.goToPage(0, false);
     }
 
-    // The grid, for a page turn with the keyboard not yet in it.
     get currentView() {
         return this._view;
     }
 
-    // Arrows with nothing inside focused go to the first tile on show.
     _focusFirst() {
         return this.currentView?.focusFirst() ?? false;
     }
 
-    // What the grid is allocated: the panel less the folder's own padding,
-    // less the header. Both are asked of the widgets themselves — the padding
-    // of the theme node (valid only once the panel is on stage), the header
-    // of its preferred height at the width it will have.
     _viewSize() {
         const node = this._panel.get_theme_node();
         const width = Math.round(this._room.width -
@@ -138,11 +100,7 @@ class GamesLibraryLibraryPanel extends MediaPanel {
 });
 
 export class LibraryWindow {
-    // `button` is the library's button beside Show Apps, which the app holds
-    // and hands to whichever place the library opens in.
     constructor({sections, itemsFor, onActivate, columns, rows, button}) {
-        // A library with nothing in it has nothing to open, as in the menu
-        // library.
         this._sections = sections.filter(s => itemsFor(s.key).length);
         this._itemsFor = itemsFor;
         this._onActivate = onActivate;
@@ -163,9 +121,6 @@ export class LibraryWindow {
         this._current = null;
     }
 
-    // The button, or the shortcut: the library, or — when that is what is up —
-    // the way out, as a second press of a folder's icon closes the folder.
-    // `key` is the section, or the library's first.
     toggle(key = this._sections[0]?.key) {
         if (this._panel?.isOpen && this._current === key) {
             this.close();
@@ -174,7 +129,6 @@ export class LibraryWindow {
         this.open(key);
     }
 
-    // `key`'s library, out of the button.
     open(key = this._sections[0]?.key) {
         const section = this._sections.find(s => s.key === key);
         if (!section)
@@ -186,8 +140,6 @@ export class LibraryWindow {
                 rows: this._rows,
                 onActivate: this._onActivate,
             });
-            // However it closes — Escape, the shade, the button unmapping
-            // with the overview — nothing is up and the button is not lit.
             this._panel.connect('open-state-changed', (_panel, isOpen) => {
                 if (isOpen)
                     return;
@@ -197,10 +149,7 @@ export class LibraryWindow {
         }
 
         if (!this._panel.isOpen) {
-            // The zoom comes out of the button's icon, which is a BaseIcon and
-            // so is its own artwork. A shortcut pressed on the desktop finds
-            // it unmapped, the dash being the overview's, and an unmapped
-            // icon has nowhere to zoom out of: the panel fades in centred.
+            // An unmapped icon (a shortcut on the desktop) makes it fade in centred.
             this._panel.popup(this._button.icon);
             if (!this._panel.isOpen)
                 return;
@@ -223,13 +172,11 @@ export class LibraryWindow {
         return this._panel?.isOpen ? this._panel.currentView : null;
     }
 
-    // What is up, for a rebuild to put back (see MediaMenu.state).
+    // For a rebuild to put the library back up.
     get state() {
         return {key: this._panel?.isOpen ? this._current : null};
     }
 
-    // The panel back up on the section `state` names, out of the button — the
-    // same one it was opened from, which a rebuild leaves where it is.
     restore(state) {
         if (state?.key)
             this.open(state.key);

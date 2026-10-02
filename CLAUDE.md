@@ -36,7 +36,7 @@ global.
 - `scripts/`: the kit's `dev.sh`, `nested.sh`, `nested_driver.py`, `dev-extension.js`,
   `kit.mk` (synced from the kit); its own `ext.conf`, `dev.d/games.sh` (`scan`, `scanner`,
   `stalls`), `nested.d/games.sh` (the demo library), `demo_library.py`, `vpad.py`,
-  `stallwatch.py`. `docs/`: private API, compatibility, publishing.
+  `stallwatch.py`. `docs/`: private API, compatibility, publishing, design notes.
 
 The section's identity (its key, its `games-` settings, its title, its icon) is
 `SECTIONS` in `lib/library.js` and nothing else restates it: `prefs.js` imports that list
