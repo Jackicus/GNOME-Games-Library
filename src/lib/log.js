@@ -1,6 +1,4 @@
-// Lines that say what the extension is doing, such as a rebuild after a
-// rescan. The shipped extension logs only failures; the development entry
-// point, scripts/dev-extension.js, turns these on.
+// Off in the shipped extension; scripts/dev-extension.js turns it on.
 
 let verbose = false;
 

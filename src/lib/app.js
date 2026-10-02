@@ -1,23 +1,5 @@
-// GamesLibraryApp: where the games library opens, where a picked game opens, and
-// what launching one does.
-//
-// Two settings decide where things open, and they are read independently of
-// each other: `library-opens-in` for the grid, `detail-opens-in` for the pane
-// of a picked game. Both take the same two values, meaning the same two
-// places:
-//
-//   menu    in the overview's app-grid slot (mediaMenu.js) for the library;
-//           popped up as an app folder is (detailDialog.js) for a pane
-//   modal   in the folder's panel over the desktop (libraryWindow.js for the
-//           library, detailDialog.js for a pane), held until it is closed
-//
-// Neither setting looks at the other, and nothing follows from the pair.
-//
-// Nothing is drawn on the wallpaper. A game is one thing to launch, not a
-// collection to leave standing on the desktop, so the library is only ever
-// somewhere of the shell's, opened from its button beside Show Apps — the one
-// button, held here for as long as the extension is enabled, whichever place
-// the library opens in.
+// GamesLibraryApp: builds the library and the detail pop-up where the
+// `library-opens-in` and `detail-opens-in` settings say, and launches games.
 
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as Util from 'resource:///org/gnome/shell/misc/util.js';
@@ -37,12 +19,7 @@ import {DetailDialog} from './detailDialog.js';
 import {Controls} from './controls.js';
 import {note} from './log.js';
 
-// What Play and the rows of the pane open. An array is a game's command line
-// — Steam's own launch URI, or PCSX2 with the disc — run as it is; the
-// shell's own spawn helper says so in a notification when that fails.
-// Anything else is a folder, handed to whatever opens folders.
-//
-// `beforeLaunch` runs just before a game is launched, and never for a folder.
+// An array is a game's command line, run as it is; anything else is a folder.
 function openPath(path, beforeLaunch = null) {
     if (!path)
         return;
@@ -51,9 +28,7 @@ function openPath(path, beforeLaunch = null) {
         Util.spawn(path);
         return;
     }
-    // Asynchronously all the way: a PS2 disc folder can sit on a network
-    // share or an automount that has idled out, and a folder asked about
-    // synchronously would stand the whole desktop still until it wakes.
+    // Async: a disc folder can be on a share that blocks for seconds.
     const file = Gio.File.new_for_path(path);
     Gio.AppInfo.launch_default_for_uri_async(file.get_uri(),
         global.create_app_launch_context(0, -1), null, (_source, res) => {
@@ -69,22 +44,16 @@ export class GamesLibraryApp {
     constructor(extension) {
         this._settings = extension.getSettings();
         this._sections = {};
-        // The one way in, wherever the library opens. It lives as long as the
-        // extension does rather than per build, so a rescan or a setting
-        // changed does not take it out of the dash and put it back — nor move
-        // it past another extension's button beside Show Apps.
+        // Kept across rebuilds, so it never moves past another extension's button.
         this._button = new LibraryButton({
             path: extension.path,
             onActivate: () => this._toggleLibrary(),
         });
-        // Where the library is browsed: the menu view or the window view.
         this._browser = null;
-        // The pop-up a pick opens in, whichever place that is.
         this._dialog = null;
         this._monitor = null;
         this._rebuildTimer = 0;
         this._reloadWanted = false;
-        // Remotes, controllers and keys of the user's own (controls.js).
         this._controls = new Controls(this._settings, {
             isActive: () => this._controlsActive(),
             onHome: () => this._controlsHome(),
@@ -93,13 +62,7 @@ export class GamesLibraryApp {
         });
     }
 
-    // ------------------------------------------------------------------
-    // Lifecycle
-    // ------------------------------------------------------------------
-    // The shell never disables an extension whose enable() threw, so a failure
-    // halfway would leave the button, the signals and the key binding behind
-    // until a restart: take down what was built, then fail as the shell
-    // expects.
+    // The shell never disables an extension whose enable() threw.
     enable() {
         try {
             this._enable();
@@ -114,8 +77,7 @@ export class GamesLibraryApp {
         this._sections = loadLibrary();
         this._build();
 
-        // Every size in JS is physical pixels, worked out from the scale
-        // factor as it was; a change of it is a change of everything.
+        // Every size in JS is physical pixels.
         St.ThemeContext.get_for_stage(global.stage).connectObject('notify::scale-factor',
             () => this._scheduleRebuild(), this);
 
@@ -124,12 +86,7 @@ export class GamesLibraryApp {
         for (const key of rebuildKeys)
             this._settings.connectObject(`changed::${key}`, () => this._scheduleRebuild(), this);
 
-        // The shortcut, grabbed the way the shell grabs its own: the setting
-        // holds the accelerators, and mutter follows it as it changes, so a
-        // shortcut set in the preferences works at once. In the overview as
-        // well as on the desktop, as Super+A is — and over a popup, which is
-        // only so the modal library's own panel can be closed with it; see
-        // `_onShortcut`.
+        // POPUP too, only so the shortcut can close the modal library (_onShortcut).
         for (const section of SECTIONS) {
             Main.wm.addKeybinding(`${section.prefix}-shortcut`, this._settings,
                 Meta.KeyBindingFlags.NONE,
@@ -137,8 +94,6 @@ export class GamesLibraryApp {
                 () => this._onShortcut());
         }
 
-        // The scanner writes library.json atomically; refresh when it lands so
-        // a rescan from the preferences shows up without touching the shell.
         try {
             const file = Gio.File.new_for_path(libraryPath());
             this._monitor = file.monitor_file(Gio.FileMonitorFlags.NONE, null);
@@ -173,18 +128,14 @@ export class GamesLibraryApp {
     }
 
     _teardown() {
-        // Closes whatever it had open, too.
         this._browser?.disable();
         this._browser = null;
-        // Let go of the keyboard and the tile it came out of before it goes.
         this._dialog?.popdown();
         this._dialog?.destroy();
         this._dialog = null;
     }
 
-    // Settings arrive in bursts (a slider dragged, a spin button held down),
-    // and a rescan writes the library more than once; `reload` rides the same
-    // timer so a burst of either is one rebuild.
+    // Settings and rescans arrive in bursts; each burst is one rebuild.
     _scheduleRebuild({reload = false, delay = 150} = {}) {
         this._reloadWanted ||= reload;
         if (this._rebuildTimer)
@@ -194,9 +145,6 @@ export class GamesLibraryApp {
             if (this._reloadWanted)
                 this._sections = loadLibrary();
             this._reloadWanted = false;
-            // A browser being looked at is put back up once rebuilt, so the
-            // change that caused the rebuild shows where it is being looked
-            // for rather than on the next press.
             const browsing = this._browser?.state ?? null;
             this._teardown();
             this._build();
@@ -206,11 +154,6 @@ export class GamesLibraryApp {
         });
     }
 
-    // ------------------------------------------------------------------
-    // Settings helpers
-    // ------------------------------------------------------------------
-    // The two independent choices, each 'menu' or 'modal'; see the note at
-    // the top of this file.
     _libraryMode() {
         return this._settings.get_string('library-opens-in');
     }
@@ -219,34 +162,22 @@ export class GamesLibraryApp {
         return this._settings.get_string('detail-opens-in');
     }
 
-    // ------------------------------------------------------------------
-    // Building
-    // ------------------------------------------------------------------
     _build() {
-        // Every rounded surface reads its radius as it is constructed, so the
-        // setting has to be in place before anything below is built.
+        // Read as each surface is built, so set first.
         setCornerRadius(this._settings.get_int('corner-radius'));
         setGridAlign(this._settings.get_string('grid-align'));
 
-        // A library with no games in it has nothing to open, and no button to
-        // open it with; one that has keeps the button it had. The shortcut
-        // and a controller's Home still reach the browser, which opens
-        // nothing.
         if (SECTIONS.some(s => this._sections[s.key]?.length))
             this._button.attach();
         else
             this._button.detach();
 
-        // A pick pops up in the folder's panel, which hosts itself over
-        // whatever it is opened from.
         this._dialog = new DetailDialog({
             onOpen: path => this._open(path),
             size: this._settings.get_int('detail-size') / 100,
             mode: this._detailMode(),
         });
 
-        // The library as a second application menu in the overview, or in a
-        // panel popped out of its button.
         const Browser = this._libraryMode() === 'modal' ? LibraryWindow : MediaMenu;
         this._browser = new Browser({
             sections: SECTIONS,
@@ -259,70 +190,46 @@ export class GamesLibraryApp {
         this._browser.enable();
     }
 
-    // ------------------------------------------------------------------
-    // Navigation
-    // ------------------------------------------------------------------
-    // The button, or the shortcut: the library, wherever it opens, or — when
-    // that is what is up — the way back out. The browser is pressed as its
-    // own button would be.
     _toggleLibrary() {
         this._browser?.toggle();
     }
 
-    // The shortcut is the button's press, wherever the library opens.
     _onShortcut() {
-        // A popup holds the keyboard for itself — a menu in the top bar, the
-        // detail pop-up, another extension's panel — unless it is the modal
-        // library's panel, which the shortcut closes as its button does.
+        // A popup keeps the keyboard, unless it is the modal library's own panel.
         if (Main.actionMode === Shell.ActionMode.POPUP &&
             !(this._browser instanceof LibraryWindow && this._browser.isShowing))
             return;
         this._toggleLibrary();
     }
 
-    // A pick in the library. A "modal" pane wants the desktop to itself, so
-    // the library goes first (the popup hides the overview itself).
     _openPicked(key, item, tile) {
         if (this._detailMode() === 'modal')
             this._browser.close();
         this._dialog.popup(tile, item, sectionByKey(key));
     }
 
-    // Is the library what has the keyboard — the pop-up, or a browser on
-    // show? A controller is only acted on while it is.
     _controlsActive() {
         return !!(this._dialog?.isOpen || this._browser?.isShowing);
     }
 
-    // Home, from a remote or a controller: all the way out, to wherever the
-    // library was opened from.
     _controlsHome() {
         this._dialog?.popdown();
         this._browser?.close();
     }
 
-    // Home on a controller with nothing of ours up: the library, opened, when
-    // nothing else has the keyboard — never over a window, where it would be
-    // a game's own button too, and never over someone else's popup or
-    // overview.
+    // Never over a window, where Home is the game's own button.
     _controlsOpen() {
         if (global.display.focus_window || Main.modalCount > 0)
             return;
         this._browser?.open();
     }
 
-    // What the pane opens: a game's command line, or a folder.
     _open(path) {
         openPath(path, () => this._launching());
     }
 
-    // A game is being launched, so whatever was up to pick it goes: left up,
-    // the pop-up holds a grab the game's window cannot get past, and the
-    // overview covers it. With `play-on-new-workspace`, onto an empty
-    // workspace first, so the game's window maps there — a new window opens
-    // on the active workspace — and the one it was picked from stays as it
-    // was. The workspace is not held: the game's window is what keeps it,
-    // and when that closes the shell folds it away as it would any other.
+    // The pop-up's grab would hold the game's window off. A new window maps on the
+    // active workspace, hence the switch first.
     _launching() {
         this._dialog?.popdown();
         this._browser?.close();
@@ -337,13 +244,7 @@ export class GamesLibraryApp {
         workspace.activate(global.get_current_time());
     }
 
-    // An empty workspace, made if need be. Dynamic workspaces always end in
-    // one, which is exactly what is wanted; with a fixed number, the first
-    // that nothing is using.
-    //
-    // A workspace held open by `_keepAliveId` is not free however empty it
-    // looks: the shell sets it on one being dragged to, and an extension may
-    // on one it has claimed for itself. Only read, never set, here.
+    // `_keepAliveId` marks a workspace the shell (a drag) or an extension holds.
     _emptyWorkspace() {
         const wm = global.workspace_manager;
         const free = ws => ws && !ws._keepAliveId &&
