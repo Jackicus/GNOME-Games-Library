@@ -394,8 +394,8 @@ export default class GamesLibraryPreferences extends ExtensionPreferences {
 
         // As GNOME Settings does, so a taken key reaches the dialog to be refused.
         const surface = window.get_surface();
-        surface?.inhibit_system_shortcuts?.(null);
-        dialog.connect('closed', () => surface?.restore_system_shortcuts?.());
+        surface.inhibit_system_shortcuts(null);
+        dialog.connect('closed', () => surface.restore_system_shortcuts());
         dialog.present(window);
         return dialog;
     }

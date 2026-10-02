@@ -62,7 +62,6 @@ export class Controls {
         this._pads = new Set();
         this._axes = new Map();
         this._held = new Map();
-        this._starting = null;
     }
 
     enable() {
@@ -133,8 +132,8 @@ export class Controls {
 
     _press(keyval) {
         const time = GLib.get_monotonic_time();
-        this._device?.notify_keyval(time, keyval, Clutter.KeyState.PRESSED);
-        this._device?.notify_keyval(time, keyval, Clutter.KeyState.RELEASED);
+        this._device.notify_keyval(time, keyval, Clutter.KeyState.PRESSED);
+        this._device.notify_keyval(time, keyval, Clutter.KeyState.RELEASED);
     }
 
     _turnPage(delta) {
@@ -153,18 +152,14 @@ export class Controls {
 
     // libmanette is optional: loaded when first wanted, and its absence is no error.
     async _startPads() {
-        if (this._monitor || this._starting)
+        if (this._monitor)
             return;
-        const starting = this._starting = {};
         let Manette;
         try {
             ({default: Manette} = await import('gi://Manette'));
         } catch {
             note('libmanette is not installed; game controllers are not read.');
             return;
-        } finally {
-            if (this._starting === starting)
-                this._starting = null;
         }
         if (current !== this || !this._settings.get_boolean('gamepad-enabled') || this._monitor)
             return;
@@ -177,7 +172,6 @@ export class Controls {
     }
 
     _stopPads() {
-        this._starting = null;
         for (const pad of this._pads)
             pad.disconnectObject(this);
         this._pads.clear();

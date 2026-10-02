@@ -20,11 +20,11 @@ import {Controls} from './controls.js';
 import {note} from './log.js';
 
 // An array is a game's command line, run as it is; anything else is a folder.
-function openPath(path, beforeLaunch = null) {
+function openPath(path, beforeLaunch) {
     if (!path)
         return;
     if (Array.isArray(path)) {
-        beforeLaunch?.();
+        beforeLaunch();
         Util.spawn(path);
         return;
     }
@@ -58,21 +58,11 @@ export class GamesLibraryApp {
             isActive: () => this._controlsActive(),
             onHome: () => this._controlsHome(),
             onOpen: () => this._controlsOpen(),
-            currentView: () => this._browser?.currentView ?? null,
+            currentView: () => this._browser.currentView,
         });
     }
 
-    // The shell never disables an extension whose enable() threw.
     enable() {
-        try {
-            this._enable();
-        } catch (e) {
-            this.disable();
-            throw e;
-        }
-    }
-
-    _enable() {
         this._controls.enable();
         this._sections = loadLibrary();
         this._build();
@@ -94,19 +84,14 @@ export class GamesLibraryApp {
                 () => this._onShortcut());
         }
 
-        try {
-            const file = Gio.File.new_for_path(libraryPath());
-            this._monitor = file.monitor_file(Gio.FileMonitorFlags.NONE, null);
-            this._monitor.connect('changed', (_m, _f, _o, event) => {
-                if (event === Gio.FileMonitorEvent.CHANGES_DONE_HINT ||
-                    event === Gio.FileMonitorEvent.CREATED ||
-                    event === Gio.FileMonitorEvent.RENAMED ||
-                    event === Gio.FileMonitorEvent.MOVED_IN)
-                    this._scheduleRebuild({reload: true, delay: 400});
-            });
-        } catch (e) {
-            console.warn(`[Games Library] Could not watch library.json: ${e}`);
-        }
+        this._monitor = Gio.File.new_for_path(libraryPath()).monitor_file(Gio.FileMonitorFlags.NONE, null);
+        this._monitor.connect('changed', (_m, _f, _o, event) => {
+            if (event === Gio.FileMonitorEvent.CHANGES_DONE_HINT ||
+                event === Gio.FileMonitorEvent.CREATED ||
+                event === Gio.FileMonitorEvent.RENAMED ||
+                event === Gio.FileMonitorEvent.MOVED_IN)
+                this._scheduleRebuild({reload: true, delay: 400});
+        });
     }
 
     disable() {
@@ -114,10 +99,8 @@ export class GamesLibraryApp {
             Main.wm.removeKeybinding(`${section.prefix}-shortcut`);
         St.ThemeContext.get_for_stage(global.stage).disconnectObject(this);
         this._settings.disconnectObject(this);
-        if (this._monitor) {
-            this._monitor.cancel();
-            this._monitor = null;
-        }
+        this._monitor.cancel();
+        this._monitor = null;
         if (this._rebuildTimer)
             GLib.source_remove(this._rebuildTimer);
         this._rebuildTimer = 0;
@@ -128,10 +111,10 @@ export class GamesLibraryApp {
     }
 
     _teardown() {
-        this._browser?.disable();
+        this._browser.disable();
         this._browser = null;
-        this._dialog?.popdown();
-        this._dialog?.destroy();
+        this._dialog.popdown();
+        this._dialog.destroy();
         this._dialog = null;
     }
 
@@ -145,10 +128,10 @@ export class GamesLibraryApp {
             if (this._reloadWanted)
                 this._sections = loadLibrary();
             this._reloadWanted = false;
-            const browsing = this._browser?.state ?? null;
+            const browsing = this._browser.state;
             this._teardown();
             this._build();
-            this._browser?.restore(browsing);
+            this._browser.restore(browsing);
             note('Rebuilt');
             return GLib.SOURCE_REMOVE;
         });
@@ -167,7 +150,7 @@ export class GamesLibraryApp {
         setCornerRadius(this._settings.get_int('corner-radius'));
         setGridAlign(this._settings.get_string('grid-align'));
 
-        if (SECTIONS.some(s => this._sections[s.key]?.length))
+        if (SECTIONS.some(s => this._sections[s.key].length))
             this._button.attach();
         else
             this._button.detach();
@@ -191,7 +174,7 @@ export class GamesLibraryApp {
     }
 
     _toggleLibrary() {
-        this._browser?.toggle();
+        this._browser.toggle();
     }
 
     _onShortcut() {
@@ -209,19 +192,19 @@ export class GamesLibraryApp {
     }
 
     _controlsActive() {
-        return !!(this._dialog?.isOpen || this._browser?.isShowing);
+        return this._dialog.isOpen || this._browser.isShowing;
     }
 
     _controlsHome() {
-        this._dialog?.popdown();
-        this._browser?.close();
+        this._dialog.popdown();
+        this._browser.close();
     }
 
     // Never over a window, where Home is the game's own button.
     _controlsOpen() {
         if (global.display.focus_window || Main.modalCount > 0)
             return;
-        this._browser?.open();
+        this._browser.open();
     }
 
     _open(path) {
@@ -231,8 +214,8 @@ export class GamesLibraryApp {
     // The pop-up's grab would hold the game's window off. A new window maps on the
     // active workspace, hence the switch first.
     _launching() {
-        this._dialog?.popdown();
-        this._browser?.close();
+        this._dialog.popdown();
+        this._browser.close();
         Main.overview.hide();
         if (!this._settings.get_boolean('play-on-new-workspace'))
             return;
@@ -247,7 +230,7 @@ export class GamesLibraryApp {
     // `_keepAliveId` marks a workspace the shell (a drag) or an extension holds.
     _emptyWorkspace() {
         const wm = global.workspace_manager;
-        const free = ws => ws && !ws._keepAliveId &&
+        const free = ws => !ws._keepAliveId &&
             !ws.list_windows().some(w => !w.is_on_all_workspaces());
         if (Meta.prefs_get_dynamic_workspaces()) {
             const last = wm.get_workspace_by_index(wm.n_workspaces - 1);
