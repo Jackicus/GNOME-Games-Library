@@ -22,7 +22,7 @@ export const NATIVE_KEYS = [
 
 // Linux input codes for a mapped pad, face buttons by position (307 is the top).
 // An unmapped pad's own codes show as numbers.
-export const PAD_BUTTONS = {
+const PAD_BUTTONS = {
     304: 'A', 305: 'B', 307: 'Y', 308: 'X',
     310: 'LB', 311: 'RB', 312: 'LT', 313: 'RT',
     314: 'View', 315: 'Menu', 316: 'Guide',
@@ -30,7 +30,7 @@ export const PAD_BUTTONS = {
     544: 'D-pad up', 545: 'D-pad down', 546: 'D-pad left', 547: 'D-pad right',
 };
 
-export const PAD_AXES = {
+const PAD_AXES = {
     0: ['Left stick left', 'Left stick right'],
     1: ['Left stick up', 'Left stick down'],
     3: ['Right stick left', 'Right stick right'],
